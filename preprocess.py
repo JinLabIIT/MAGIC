@@ -52,16 +52,21 @@ def process_batch(batch_index):
     start_index = batch_index * batch_size
     end_index = min(len(all_filenames), (batch_index + 1) * batch_size)
     dataset = np.zeros((end_index - start_index, unified_length))
+    labels = np.zeros((end_index - start_index, 9))
     metainfo = dict()
     for i in range(start_index, end_index):
         content = extract_byte_string(all_filenames[i])
         integer, num_unknown = tokenize(content)
         num_paddings = pad_zeros(integer)
-        dataset[i - batch_index * batch_size, :] = integer
-        metainfo[all_filenames[i]] = [num_unknown, num_paddings]
+
+        byte_id = all_filenames[i].split('/')[1][:20]
+        dataset[i - start_index, :] = integer
+        labels[i - start_index, label_mapping[byte_id] - 1] = 1
+        metainfo[byte_id] = [num_unknown, num_paddings]
 
     print(dataset.shape)
-    batch_result = {'dataset': dataset, 'metainfo': metainfo}
+    batch_result = {'dataset': dataset, 'labels': labels,
+                    'metainfo': metainfo}
     pkl.dump(batch_result,
              open('trainset_batch_ind%d.pkl' % batch_index, 'wb'))
 
@@ -75,6 +80,19 @@ def cal_unified_length():
     return result
 
 
+def load_labels(filename):
+    label_mapping = dict()
+    f = open(filename, 'rb')
+    f.readline()  # skip column names
+    for line in f.readlines():
+        content = line.strip('\r\n').split(',')
+        """strip "s around id"""
+        label_mapping[content[0].strip('"')] = int(content[1])
+
+    f.close()
+    return label_mapping
+
+
 """
 max length of bytes in trainset = 15417344
 max size file is BrePaE2xAs9fJtqvN1Wp.bytes
@@ -85,5 +103,6 @@ batch_size = 10
 num_batches = 3
 unified_length = cal_unified_length()
 print('Unified byte length = %d (to pad)' % unified_length)
+label_mapping = load_labels('trainLabels.csv')
 for i in range(num_batches):
     process_batch(i)
