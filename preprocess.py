@@ -48,9 +48,9 @@ def pad_zeros(content):
     return num_paddings
 
 
-def process_batch(batch_index):
-    start_index = batch_index * batch_size
-    end_index = min(len(all_filenames), (batch_index + 1) * batch_size)
+def process_part(part_index):
+    start_index = part_index * part_size
+    end_index = min(len(all_filenames), (part_index + 1) * part_size)
     dataset = np.zeros((end_index - start_index, unified_length))
     labels = np.zeros((end_index - start_index, 9))
     metainfo = dict()
@@ -65,15 +65,14 @@ def process_batch(batch_index):
         metainfo[byte_id] = [num_unknown, num_paddings]
 
     print(dataset.shape)
-    batch_result = {'dataset': dataset, 'labels': labels,
-                    'metainfo': metainfo}
-    pkl.dump(batch_result,
-             open('trainset_batch_ind%d.pkl' % batch_index, 'wb'))
+    partition = {'dataset': dataset, 'labels': labels, 'metainfo': metainfo}
+    pkl.dump(partition,
+             open('trainset_part_ind%d.pkl' % part_index, 'wb'))
 
 
 def cal_unified_length():
     result = 0
-    for filename in all_filenames[:batch_size * num_batches]:
+    for filename in all_filenames[:part_size * num_parts]:
         content = extract_byte_string(filename)
         result = max(result, len(content))
 
@@ -99,10 +98,10 @@ max size file is BrePaE2xAs9fJtqvN1Wp.bytes
 """
 trainset_dir = 'trainSet'
 all_filenames = glob.glob(trainset_dir + '/*.bytes')
-batch_size = 10
-num_batches = 3
+part_size = 100
+num_parts = 10
 unified_length = cal_unified_length()
 print('Unified byte length = %d (to pad)' % unified_length)
 label_mapping = load_labels('trainLabels.csv')
-for i in range(num_batches):
-    process_batch(i)
+for i in range(num_parts):
+    process_part(i)
