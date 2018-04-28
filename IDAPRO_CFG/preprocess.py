@@ -39,9 +39,8 @@ def extract_node_hist():
     return pkl_filenames
 
 
-def extract_op_words():
+def extract_operator_words():
     operators = Set()
-    operands = Set()
     for class_dirname in class_dirnames:
         data_dirnames = glob.glob(class_dirname + '/*')
         for data_dirname in data_dirnames:
@@ -52,20 +51,36 @@ def extract_op_words():
                     instructions = attributes['Ins']
                     for (addr, inst) in instructions:
                         operators.add(inst[0])
+
+    df = pd.DataFrame({'operator': list(operators)})
+    df = df.sort_values(by='operator')
+    df.to_csv('operator.csv', index=False, header=False)
+
+
+def extract_operand_words():
+    operands = Set()
+    for class_dirname in class_dirnames:
+        data_dirnames = glob.glob(class_dirname + '/*')
+        for data_dirname in data_dirnames:
+            data_paths = glob.glob(data_dirname + '/*')
+            if len(data_paths) > 0:
+                G = pkl.load(open(data_paths[0], 'rb'))
+                for (node, attributes) in G.nodes(data=True):
+                    instructions = attributes['Ins']
+                    for (addr, inst) in instructions:
                         if len(inst) > 1:
                             for op in inst[1].split(','):
                                 comment_idx = op.find(';')
                                 operands.add(op if comment_idx == -1
                                              else op[:comment_idx])
 
-    df = pd.DataFrame({'operator': list(operators)})
-    df.to_csv('operator.csv', index=False)
     df = pd.DataFrame({'operand': list(operands)})
-    df.to_csv('operand.csv', index=False)
+    df = df.sort_values(by='operand')
+    df.to_csv('operand.csv', index=False, header=False)
 
 
 class_dirnames = glob.glob('./*')
-extract_op_words()
+extract_operator_words()
 # extract_node_hist()
 # print(to_numpy_matrix(G).shape)
 # for (n, nbrs) in G.adjacency_iter():
