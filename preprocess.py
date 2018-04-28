@@ -1,7 +1,8 @@
 from __future__ import division
 import numpy as np
-import glob
 import pickle as pkl
+import matplotlib.pyplot as plt
+import os
 
 
 def extract_byte_string(filename):
@@ -27,28 +28,31 @@ def tokenize(byte_string):
                 'A': 10, 'B': 11, 'C': 12, 'D': 13, 'E': 14, 'F': 15}
     integer = []
     num_unknown = 0
+    num_zeros = 0
     for b in byte_string:
         if b == '??':
             num_unknown += 1
             integer.append(256)
         else:
+            num_zeros += (b == '00')
             integer.append(char2int[b[0]] * 16 + char2int[b[1]])
 
-    print('Parsed %d tokens, in which %.2f%% are ??' %
-          (len(integer), num_unknown / len(integer) * 100))
+    print('Parsed %d tokens, in which %.2f%% are ??, %.2f%% are 00' %
+          (len(integer), num_unknown / len(integer) * 100,
+           num_zeros / len(integer) * 100))
     return integer, num_unknown
 
 
-def pad_zeros(content):
-    num_paddings = unified_length - len(content)
+def pad_zeros(content, num_paddings):
     paddings = [0] * num_paddings
-    print('Padded %.2f%% zeros to origin %d bytes' %
+    print('Padded %.2f%% zeros[origin %d bytes] to unified vector length' %
           (num_paddings / len(content) * 100, len(content)))
     content += paddings
     return num_paddings
 
 
-def process_part(part_index):
+def process_part(part_index, part_size, unified_length,
+                 all_filenames, label_mapping):
     start_index = part_index * part_size
     end_index = min(len(all_filenames), (part_index + 1) * part_size)
     dataset = np.zeros((end_index - start_index, unified_length))
@@ -57,7 +61,7 @@ def process_part(part_index):
     for i in range(start_index, end_index):
         content = extract_byte_string(all_filenames[i])
         integer, num_unknown = tokenize(content)
-        num_paddings = pad_zeros(integer)
+        num_paddings = pad_zeros(integer, unified_length - len(integer))
 
         byte_id = all_filenames[i].split('/')[1][:20]
         dataset[i - start_index, :] = integer
@@ -70,9 +74,9 @@ def process_part(part_index):
              open('trainset_part_ind%d.pkl' % part_index, 'wb'))
 
 
-def cal_unified_length():
+def cal_unified_length(all_filenames, end_index):
     result = 0
-    for filename in all_filenames[:part_size * num_parts]:
+    for filename in all_filenames[:end_index]:
         content = extract_byte_string(filename)
         result = max(result, len(content))
 
@@ -92,16 +96,22 @@ def load_labels(filename):
     return label_mapping
 
 
-"""
-max length of bytes in trainset = 15417344
-max size file is BrePaE2xAs9fJtqvN1Wp.bytes
-"""
-trainset_dir = 'trainSet'
-all_filenames = glob.glob(trainset_dir + '/*.bytes')
-part_size = 100
-num_parts = 10
-unified_length = cal_unified_length()
-print('Unified byte length = %d (to pad)' % unified_length)
-label_mapping = load_labels('trainLabels.csv')
-for i in range(num_parts):
-    process_part(i)
+def test_byte_process():
+    content = extract_byte_string("trainSet/k9LJAopKrhzt8H3iIDuf.bytes")
+    integer, num_unknown = tokenize(content)
+    return pad_zeros(integer)
+# unified_length = 320000
+# test_byte_process()
+
+
+def file_size_histogram(all_filenames):
+    file_sizes = [os.stat(filename).st_size for filename in all_filenames]
+    filtered = [x for x in file_sizes if x < 1e7]
+    print('%.2f files is within 10M' %
+          (len(filtered) / len(file_sizes)))
+    print('Max size = %.2f Mb' % (max(file_sizes) / 1e6))
+    n, bins, patches = plt.hist(filtered, 1000, histtype='step', alpha=0.7)
+    plt.xlabel('File Sizes (Bytes)')
+    plt.ylabel('#File Instances')
+    plt.grid(True)
+    plt.savefig('FileSizeHist.pdf', format='pdf', bbox_inches='tight')
