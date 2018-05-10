@@ -2,13 +2,14 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from networkx import to_numpy_matrix, number_of_nodes
+from networkx import number_of_nodes
 from sets import Set
 # from itertools import izip_longest
 import pandas as pd
 import pickle as pkl
 # import csv
 import glob
+import re
 
 
 def extract_node_hist():
@@ -79,9 +80,37 @@ def extract_operand_words():
     df.to_csv('operand.csv', index=False, header=False)
 
 
+def match_constants():
+    f = open('operand.csv', 'rb')
+    numerics = []
+    strings = []
+    for line in f.readlines():
+        operand = line.strip('\n\r\t ')
+        if re.match(r'^[0-9A-Fa-f]+h?$', operand):
+            numerics.append(operand)
+
+        num_in_expr = r'.*([+*/]|-){1}([0-9A-Fa-f]+h?).*'
+        pattern = re.compile(num_in_expr)
+        match = pattern.search(operand, 0)
+        while match:
+            numerics.append(
+                operand + str(match.start(2)) + ':' + str(match.end(2)))
+            restart = match.end(2)
+            match = pattern.search(operand, restart)
+
+        match = re.match(r'([\"\'][^"]*[\'\"])', operand)
+        if match:
+            strings.append(operand + str(len(match.groups())))
+
+    f.close()
+
+    df = pd.DataFrame(numerics)
+    df.to_csv('parsed_num.csv', index=False, header=False)
+    df = pd.DataFrame(strings)
+    df.to_csv('parsed_str.csv', index=False, header=False)
+
+
 class_dirnames = glob.glob('./*')
-extract_operator_words()
+# extract_operator_words()
 # extract_node_hist()
-# print(to_numpy_matrix(G).shape)
-# for (n, nbrs) in G.adjacency_iter():
-# for nbr, eattr in nbrs.items():
+match_constants()
