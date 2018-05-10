@@ -81,26 +81,32 @@ def extract_operand_words():
 
 
 def match_constants():
-    f = open('operand.csv', 'rb')
+    f = open('test_operand.csv', 'rb')
     numerics = []
     strings = []
     for line in f.readlines():
         operand = line.strip('\n\r\t ')
-        if re.match(r'^[0-9A-Fa-f]+h?$', operand):
-            numerics.append(operand)
+        """Whole operand is a num OR leading num in expression.
+        E.g. "0ABh", "589h", "0ABh" in "0ABh*589h"
+        """
+        whole_num = r'^([1-9][0-9A-F]*|0[A-F][0-9A-F]*)h?.*'
+        pattern = re.compile(whole_num)
+        if pattern.match(operand):
+            numerics.append('%s:WHOLE/LEAD' % operand)
 
-        num_in_expr = r'.*([+*/]|-){1}([0-9A-Fa-f]+h?).*'
+        """Number inside expression, exclude the leading one."""
+        num_in_expr = r'([+*/:]|-)([1-9][0-9A-F]*|0[A-F][0-9A-F]*)h?'
         pattern = re.compile(num_in_expr)
-        match = pattern.search(operand, 0)
-        while match:
-            numerics.append(
-                operand + str(match.start(2)) + ':' + str(match.end(2)))
-            restart = match.end(2)
-            match = pattern.search(operand, restart)
+        match = pattern.findall(operand)
+        if len(match) > 0:
+            numerics.append('%s:%d' % (operand, len(match)))
 
-        match = re.match(r'([\"\'][^"]*[\'\"])', operand)
-        if match:
-            strings.append(operand + str(len(match.groups())))
+        """Const string inside double/single quote"""
+        str_re = r'["\'][^"]+["\']'
+        pattern = re.compile(str_re)
+        match = pattern.findall(operand)
+        if len(match) > 0:
+            strings.append('%s:%d' % (operand, len(match)))
 
     f.close()
 
