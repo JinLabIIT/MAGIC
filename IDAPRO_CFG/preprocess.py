@@ -24,6 +24,7 @@ def extract_node_hist():
             if len(data_paths) == 0:
                 print('[Warning] %s is empty' % data_dirname)
             else:
+                # Assume only 1 file under data dir
                 pkl_filenames.append(data_paths[0])
                 G = pkl.load(open(data_paths[0], 'rb'))
                 num_nodes = number_of_nodes(G)
@@ -116,7 +117,26 @@ def match_constants():
     df.to_csv('parsed_str.csv', index=False, header=False)
 
 
+def log_graph(pkl_dir, log_path):
+    data_paths = glob.glob(pkl_dir + '/*')
+    f = open(log_path, 'wb')
+    if len(data_paths) != 1:
+        print('Multiple or zero graph pickles in %s' % pkl_dir)
+    else:
+        G = pkl.load(open(data_paths[0], 'rb'))
+        for (node, attributes) in G.nodes(data=True):
+            f.write(str(node) + '\n')
+            for (key, val) in attributes.items():
+                f.write('\t%s: %s\n' % (key, str(val)))
+
+    f.close()
+
+
+pkl_dir = 'Bifrose/4058ca0cc761f2b81f11986dedb494be'
+log_path = '4058ca0cc761f2b81f11986dedb494be.log'
+log_graph(pkl_dir, log_path)
+
 class_dirnames = glob.glob('./*')
 # extract_operator_words()
 # extract_node_hist()
-match_constants()
+# match_constants()
