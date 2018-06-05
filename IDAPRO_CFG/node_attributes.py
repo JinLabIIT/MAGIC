@@ -1,3 +1,5 @@
+import re
+
 transfer = ['enter', 'leave', 'jcxz', 'iret', 'ja', 'jb', 'jbe',
             'jcxz', 'jecxz', 'jg', 'jge', 'jl', 'jle', 'jmp', 'jnb',
             'jno', 'jnp', 'jns', 'jnz', 'jo', 'jp', 'js', 'jz', 'loop',
@@ -57,8 +59,7 @@ compare = ['cmp', 'cmpnlepd', 'cmpeqsd', 'cmpltpd', 'cmpltsd',
            'setnle', 'fucom', 'fucomi', 'fucompp', 'pcmpeqb',
            'pcmpeqd', 'pcmpeqw', 'pcmpgtb', 'pcmpgtd', 'pcmpgtw',
            'pfcmpeq', 'pfcmpge', 'pfcmpgt', 'scasb', 'scasd',
-           'ucomisd', 'ucomiss',
-           ]
+           'ucomisd', 'ucomiss']
 
 read = ['rdtsc', 'bt', 'bound', 'cpuid', 'ins', 'insb', 'insd']
 
@@ -67,3 +68,54 @@ load = ['fist', 'fistp', 'fisttp', 'fld', 'fld1', 'fldcw', 'fldenv',
         'lods', 'lodsb', 'lodsd', 'lodsw', 'out', 'outs', 'outsb', 'outsd',
         'pop', 'popa', 'popf', 'popfw', 'prefetchnta', 'prefetcht0',
         'wbinvd']
+
+def classify_operator(operator):
+    if operator in transfer:
+        return 0
+    elif operator in call:
+        return 1
+    elif operator in arithemtic:
+        return 2
+    elif operator in compare:
+        return 3
+    elif operator in crypto:
+        return 4
+    elif operator in mov:
+        return 5
+    else:
+        return 6
+
+
+def match_constant(line):
+    """Parse the numeric/string constants in an operand"""
+    operand = line.strip('\n\r\t ')
+    numeric_cnts = 0
+    string_cnts = 0
+
+    """
+    Whole operand is a num OR leading num in expression.
+    E.g. "0ABh", "589h", "0ABh" in "0ABh*589h"
+    """
+    whole_num = r'^([1-9][0-9A-F]*|0[A-F][0-9A-F]*)h?.*'
+    pattern = re.compile(whole_num)
+    if pattern.match(operand):
+        numeric_cnts += 1
+        # numerics.append('%s:WHOLE/LEAD' % operand)
+
+    """Number inside expression, exclude the leading one."""
+    num_in_expr = r'([+*/:]|-)([1-9][0-9A-F]*|0[A-F][0-9A-F]*)h?'
+    pattern = re.compile(num_in_expr)
+    match = pattern.findall(operand)
+    if len(match) > 0:
+        numeric_cnts += 1
+        # numerics.append('%s:%d' % (operand, len(match)))
+
+    """Const string inside double/single quote"""
+    str_re = r'["\'][^"]+["\']'
+    pattern = re.compile(str_re)
+    match = pattern.findall(operand)
+    if len(match) > 0:
+        string_cnts += 1
+        # strings.append('%s:%d' % (operand, len(match)))
+        
+    return [numeric_cnts, string_cnts]
