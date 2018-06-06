@@ -1,4 +1,6 @@
 import re
+import numpy as np
+from networkx import number_of_nodes
 
 transfer = ['enter', 'leave', 'jcxz', 'iret', 'ja', 'jb', 'jbe',
             'jcxz', 'jecxz', 'jg', 'jge', 'jl', 'jle', 'jmp', 'jnb',
@@ -69,6 +71,7 @@ load = ['fist', 'fistp', 'fisttp', 'fld', 'fld1', 'fldcw', 'fldenv',
         'pop', 'popa', 'popf', 'popfw', 'prefetchnta', 'prefetcht0',
         'wbinvd']
 
+
 def classify_operator(operator):
     if operator in transfer:
         return 0
@@ -119,3 +122,32 @@ def match_constant(line):
         # strings.append('%s:%d' % (operand, len(match)))
         
     return [numeric_cnts, string_cnts]
+
+
+def node_features(G):
+    """
+    Extract features in each node:
+    7 operator features + 2 operand features.
+    """
+    features = np.zeros((number_of_nodes(G), 7 + 2))
+    for (i, (node, attributes)) in enumerate(G.nodes(data=True)):
+        instructions = attributes['Ins']
+        for (addr, inst) in instructions:
+            if len(inst) == 0:
+                break
+            """
+            Format of assembly code: "operator operand, operand, ..., operand"
+            """
+            operator_class = classify_operator(inst[0])
+            features[i, operator_class] += 1
+            if len(inst) == 1:
+                continue
+                
+            for part in inst[1].split(','):
+                comment_idx = part.find(';')
+                operand = part if comment_idx == -1 else part[:comment_idx]
+                numeric_cnts, string_cnts = match_constant(operand)
+                features[i, -2] += numeric_cnts
+                features[i, -1] += string_cnts
+                
+    return features
