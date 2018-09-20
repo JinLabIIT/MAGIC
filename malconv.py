@@ -1,6 +1,7 @@
 from keras.layers import Embedding, Flatten, Dense, Input
 from keras.models import Model
 import pickle as pkl
+import numpy as np
 
 
 def load_part_dataset(filename):
@@ -27,6 +28,6 @@ model.compile(optimizer='adam', loss='categorical_crossentropy',
               metrics=['accuracy'])
 model.summary()
 num_parts = 2
-for i in range(num_parts):
+for i in np.random.random_integers(0, num_parts - 1, num_parts):
     X, y = load_part_dataset('trainset_part_ind%d.pkl' % i)
     model.fit(X, y, batch_size=20, epochs=2)
