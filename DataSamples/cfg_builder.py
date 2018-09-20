@@ -2,8 +2,8 @@
 import re
 import glog as log
 import networkx as nx
-from typing import Dict, List, Optional
-
+from typing import List, Dict
+from instructions import Instruction
 
 class Block(object):
     """Block of control flow graph."""
@@ -12,8 +12,8 @@ class Block(object):
         super(Block, self).__init__()
         self.startAddr = -1
         self.endAddr = -1
-        self.instList = []
-        self.edgeList = []
+        self.instList: List[Instruction] = []
+        self.edgeList: List[Block] = []
 
 
 class ControlFlowGraphBuilder(object):
@@ -22,9 +22,9 @@ class ControlFlowGraphBuilder(object):
     def __init__(self, binaryId: str) -> None:
         super(ControlFlowGraphBuilder, self).__init__()
         self.cfg = nx.Graph()
-        self.binaryId = binaryId
-        self.addr2Inst = {}  # Addr to Instruction object
-        self.program = {}  # Addr to raw string instruction
+        self.binaryId: str = binaryId
+        self.addr2Inst: Dict[str, Instruction] = {}
+        self.program: Dict[str, str] = {}  # Addr to raw string instruction
 
     def build(self) -> None:
         self.extractTextSeg()
@@ -34,8 +34,8 @@ class ControlFlowGraphBuilder(object):
 
     def extractTextSeg(self) -> None:
         lineNum = 1
-        bytePattern = re.compile('[A-Z0-9][A-Z0-9]')
-        imcompleteByte = re.compile('\?\?')
+        bytePattern = re.compile(r'[A-Z0-9][A-Z0-9]')
+        imcompleteByte = re.compile(r'\?\?')
         fileInput = open(self.binaryId + '.asm', 'rb')
         fileOutput = open(self.binaryId + '.txt', 'w')
         for line in fileInput:
@@ -50,21 +50,32 @@ class ControlFlowGraphBuilder(object):
                 addr = seg[6:]
 
             if len(decodedElems) > 0 and imcompleteByte.match(decodedElems[0]):
-                log.debug("Ignore imcomplete code at line %d: %s" % (lineNum, " ".join(decodedElems)))
+                log.warning("Ignore imcomplete code at line %d: %s" %
+                            (lineNum, " ".join(decodedElems)))
                 continue
 
             startIdx = 0
-            while startIdx < len(decodedElems) and bytePattern.match(decodedElems[startIdx]):
-                startIdx += 1
+            while startIdx < len(decodedElems):
+                if bytePattern.match(decodedElems[startIdx]):
+                    startIdx += 1
+                else:
+                    break
 
             if startIdx == len(decodedElems):
                 log.debug("No instructions at line %d: %s" % (lineNum, elems))
                 continue
 
-            endIdx = decodedElems.index(';') if ';' in decodedElems else len(decodedElems)
+            if ';' in decodedElems:
+                endIdx = decodedElems.index(';')
+            else:
+                endIdx = len(decodedElems)
+
             instElems = [addr] + decodedElems[startIdx: endIdx]
             if len(instElems) > 1:
-                log.debug("Processed line %d: '%s' => '%s'" % (lineNum, " ".join(decodedElems), " ".join(instElems)))
+                log.debug("Processed line %d: '%s' => '%s'" %
+                          (lineNum,
+                           " ".join(decodedElems),
+                           " ".join(instElems)))
                 fileOutput.write(" ".join(instElems) + '\n')
 
             lineNum += 1
@@ -97,19 +108,39 @@ class ControlFlowGraphBuilder(object):
 
         return False
 
+    def isLabel(self, sameAddrInsts: List[str]) -> bool:
+        for inst in sameAddrInsts:
+            if inst.endswith(':'):
+                return True
+
+        return False
+
+    def isHeaderInfo(self, sameAddrInsts: List[str]) -> bool:
+        for inst in sameAddrInsts:
+            if inst.startswith('_text segment'):
+                return True
+
+        return False
+
     def aggregate(self, addr: str, sameAddrInsts: List[str]) -> None:
         """
-        Case 1: 'xxxxxx proc near' => keep last inst
-        Case 2: 'xxxxxx endp' => ignore second
-        Case 3: 1+ insts dd, db, dw
-        Case 4: Just 1 regular inst
+        Case 1: Header info
+        Case 2: 'xxxxxx proc near' => keep last inst
+        Case 3: 'xxxxxx endp' => ignore second
+        Case 4: 1+ insts dd, db, dw
+        Case 5: location label followed by regular inst
+        Case 6: Just 1 regular inst
         """
-        if self.isStartProcDef(sameAddrInsts):
+        if self.isHeaderInfo(sameAddrInsts):
+            self.program[addr] = sameAddrInsts[-1]
+        elif self.isStartProcDef(sameAddrInsts):
             self.program[addr] = sameAddrInsts[-1]
         elif self.isEndProcDef(sameAddrInsts):
             self.program[addr] = sameAddrInsts[0]
         elif self.isDataDef(sameAddrInsts):
             self.program[addr] = 'dd var_name'
+        elif self.isLabel(sameAddrInsts):
+            self.program[addr] = sameAddrInsts[-1]
         elif len(sameAddrInsts) == 1:
             self.program[addr] = sameAddrInsts[0]
         else:
@@ -122,13 +153,18 @@ class ControlFlowGraphBuilder(object):
         sameAddrInsts = []
         txtFile = open(self.binaryId + ".txt", 'r')
         for line in txtFile:
-            elems = line.split(' ')
+            elems = line.rstrip('\n').split(' ')
             addr, inst = elems[0], elems[1:]
-            if currAddr != -1 and addr != currAddr:
-                self.aggregate(currAddr, sameAddrInsts)
+            if currAddr == -1:
                 currAddr = addr
-                sameAddrInsts.clear()
+                sameAddrInsts.append(" ".join(inst))
             else:
+                if addr != currAddr:
+                    log.debug("Aggreate %d insts for addr %s" %
+                              (len(sameAddrInsts), currAddr))
+                    self.aggregate(currAddr, sameAddrInsts)
+                    sameAddrInsts.clear()
+
                 currAddr = addr
                 sameAddrInsts.append(" ".join(inst))
 
@@ -142,9 +178,9 @@ class ControlFlowGraphBuilder(object):
         pass
 
     def saveProgram(self) -> None:
-        progFile = open(self.binaryId + '.prog', 'wb')
+        progFile = open(self.binaryId + '.prog', 'w')
         for (addr, inst) in self.program.items():
-            progFile.write(addr + ' ' + inst)
+            progFile.write(addr + ' ' + inst + '\n')
         progFile.close()
 
 

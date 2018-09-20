@@ -21,7 +21,7 @@ class Instruction(object):
 class ADDInst(Instruction):
     """ADD A, B"""
     def __init__(self, instAsStr):
-        super(ADDInstruction, self).__init__()
+        super(ADDInst, self).__init__()
         elems = instAsStr.split(' ')
         self.address = elems[0]
         self.operand = elems[1]
