@@ -1,14 +1,17 @@
-#!/usr/bin/python3
+#!/usr/bin/python3.7
 import re
 import glog as log
 import networkx as nx
+import pandas as pd
+from collections import OrderedDict
 from typing import List, Dict
-from instructions import Instruction
+from instructions import Instruction, InstBuilder
+
 
 class Block(object):
     """Block of control flow graph."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super(Block, self).__init__()
         self.startAddr = -1
         self.endAddr = -1
@@ -22,8 +25,9 @@ class ControlFlowGraphBuilder(object):
     def __init__(self, binaryId: str) -> None:
         super(ControlFlowGraphBuilder, self).__init__()
         self.cfg = nx.Graph()
+        self.instBuilder: InstBuilder = InstBuilder()
         self.binaryId: str = binaryId
-        self.addr2Inst: Dict[str, Instruction] = {}
+        self.addr2Inst: OrderedDict[int, Instruction] = {}
         self.program: Dict[str, str] = {}  # Addr to raw string instruction
 
     def build(self) -> None:
@@ -33,6 +37,7 @@ class ControlFlowGraphBuilder(object):
         self.connectBlocks()
 
     def extractTextSeg(self) -> None:
+        """Extract text segment from .asm file"""
         lineNum = 1
         bytePattern = re.compile(r'[A-Z0-9][A-Z0-9]')
         imcompleteByte = re.compile(r'\?\?')
@@ -83,38 +88,6 @@ class ControlFlowGraphBuilder(object):
         fileInput.close()
         fileOutput.close()
 
-    def isStartProcDef(self, sameAddrInsts: List[str]) -> bool:
-        for inst in sameAddrInsts:
-            if inst.find('proc near') != -1:
-                return True
-
-        return False
-
-    def isEndProcDef(self, sameAddrInsts: List[str]) -> bool:
-        for inst in sameAddrInsts:
-            if inst.find('endp') != -1:
-                return True
-
-        return False
-
-    def isDataDef(self, sameAddrInsts: List[str]) -> bool:
-        for inst in sameAddrInsts:
-            if inst.find('dw') != -1:
-                return True
-            if inst.find('dd') != -1:
-                return True
-            if inst.find('db') != -1:
-                return True
-
-        return False
-
-    def isLabel(self, sameAddrInsts: List[str]) -> bool:
-        for inst in sameAddrInsts:
-            if inst.endswith(':'):
-                return True
-
-        return False
-
     def isHeaderInfo(self, sameAddrInsts: List[str]) -> bool:
         for inst in sameAddrInsts:
             if inst.startswith('_text segment'):
@@ -127,25 +100,44 @@ class ControlFlowGraphBuilder(object):
         Case 1: Header info
         Case 2: 'xxxxxx proc near' => keep last inst
         Case 3: 'xxxxxx endp' => ignore second
-        Case 4: 1+ insts dd, db, dw
+        Case 4: dd, db, dw instructions => d? var_name
         Case 5: location label followed by regular inst
         Case 6: Just 1 regular inst
         """
         if self.isHeaderInfo(sameAddrInsts):
             self.program[addr] = sameAddrInsts[-1]
-        elif self.isStartProcDef(sameAddrInsts):
-            self.program[addr] = sameAddrInsts[-1]
-        elif self.isEndProcDef(sameAddrInsts):
-            self.program[addr] = sameAddrInsts[0]
-        elif self.isDataDef(sameAddrInsts):
-            self.program[addr] = 'dd var_name'
-        elif self.isLabel(sameAddrInsts):
-            self.program[addr] = sameAddrInsts[-1]
-        elif len(sameAddrInsts) == 1:
-            self.program[addr] = sameAddrInsts[0]
+            return
+
+        validInst = []
+        foundDataDeclare = None
+        for inst in sameAddrInsts:
+            if inst.find('proc near') != -1:
+                continue
+            if inst.find('endp') != -1:
+                continue
+            if inst.find(' = ') != -1:
+                continue
+            if inst.startswith('dw ') or inst.find(' dw ') != -1:
+                foundDataDeclare = inst
+                continue
+            if inst.startswith('dd ') or inst.find(' dd ') != -1:
+                foundDataDeclare = inst
+                continue
+            if inst.startswith('db ') or inst.find(' db ') != -1:
+                foundDataDeclare = inst
+                continue
+            if inst.endswith(':'):
+                continue
+            validInst.append(inst)
+
+        if len(validInst) == 1:
+            self.program[addr] = validInst[0]
+        elif foundDataDeclare is not None:
+            self.program[addr] = foundDataDeclare
+            log.debug('Convert data declare into general format')
         else:
             log.error('Unable to aggregate instructions for addr %s:' % addr)
-            for inst in sameAddrInsts:
+            for inst in validInst:
                 log.error('%s: %s' % (addr, inst))
 
     def createProgram(self) -> None:
@@ -172,7 +164,11 @@ class ControlFlowGraphBuilder(object):
         self.saveProgram()
 
     def discoverEntries(self) -> None:
-        pass
+        """Create Instruction object for each address"""
+        with open(self.binaryId + '.prog', 'r') as progFile:
+            for line in progFile:
+                inst = self.instBuilder.createInst(line)
+                self.addr2Inst[inst.address] = inst
 
     def connectBlocks(self) -> None:
         pass
@@ -184,12 +180,23 @@ class ControlFlowGraphBuilder(object):
         progFile.close()
 
 
+def exportSeenInst(seenInst: set):
+    instColumn = {'Inst': sorted(list(seenInst))}
+    df = pd.DataFrame(data=instColumn)
+    df.to_csv('seen_inst.csv')
+
+
 if __name__ == '__main__':
     log.setLevel("INFO")
-    binaryIds = ['0A32eTdBKayjCWhZqDOQ']
-    # , '01azqd4InC7m9JpocGv5', '0ACDbR5M3ZhBJajygTuf']
-
+    binaryIds = ['0A32eTdBKayjCWhZqDOQ', '01azqd4InC7m9JpocGv5',
+                 '0ACDbR5M3ZhBJajygTuf']
+    seenInst = set()
     for bId in binaryIds:
         log.info('Processing ' + bId + '.asm')
         cfgBuilder = ControlFlowGraphBuilder(bId)
         cfgBuilder.build()
+        log.debug('%d unique insts in %s.asm' %
+                  (len(cfgBuilder.instBuilder.seenInst), bId))
+        seenInst = seenInst.union(cfgBuilder.instBuilder.seenInst)
+
+    exportSeenInst(seenInst)
