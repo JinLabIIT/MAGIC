@@ -5,7 +5,7 @@ import networkx as nx
 import pandas as pd
 from collections import OrderedDict
 from typing import List, Dict
-from instructions import Instruction, InstBuilder
+import instructions as isn
 
 
 class Block(object):
@@ -15,7 +15,7 @@ class Block(object):
         super(Block, self).__init__()
         self.startAddr = -1
         self.endAddr = -1
-        self.instList: List[Instruction] = []
+        self.instList: List[isn.Instruction] = []
         self.edgeList: List[Block] = []
 
 
@@ -25,9 +25,9 @@ class ControlFlowGraphBuilder(object):
     def __init__(self, binaryId: str) -> None:
         super(ControlFlowGraphBuilder, self).__init__()
         self.cfg = nx.Graph()
-        self.instBuilder: InstBuilder = InstBuilder()
+        self.instBuilder: isn.InstBuilder = isn.InstBuilder()
         self.binaryId: str = binaryId
-        self.addr2Inst: OrderedDict[int, Instruction] = {}
+        self.addr2Inst: OrderedDict[int, isn.Instruction] = {}
         self.program: Dict[str, str] = {}  # Addr to raw string instruction
 
     def build(self) -> None:
@@ -113,7 +113,11 @@ class ControlFlowGraphBuilder(object):
         for inst in sameAddrInsts:
             if inst.find('proc near') != -1:
                 continue
-            if inst.find('endp') != -1:
+            if inst.find('public') != -1:
+                continue
+            if inst.find('assume') != -1:
+                continue
+            if inst.find('endp') != -1 or inst.find('ends') != -1:
                 continue
             if inst.find(' = ') != -1:
                 continue
