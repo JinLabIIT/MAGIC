@@ -29,6 +29,7 @@ class ControlFlowGraphBuilder(object):
         self.binaryId: str = binaryId
         self.addr2Inst: OrderedDict[int, isn.Instruction] = {}
         self.program: Dict[str, str] = {}  # Addr to raw string instruction
+        self.programEnd: int = -1
 
     def build(self) -> None:
         self.extractTextSeg()
@@ -169,10 +170,64 @@ class ControlFlowGraphBuilder(object):
 
     def discoverEntries(self) -> None:
         """Create Instruction object for each address"""
+        prevAddr = -1
         with open(self.binaryId + '.prog', 'r') as progFile:
             for line in progFile:
                 inst = self.instBuilder.createInst(line)
+                if prevAddr != -1:
+                    self.addr2Inst[prevAddr].size = inst.address - prevAddr
+
                 self.addr2Inst[inst.address] = inst
+                self.programEnd = max(inst.address, self.programEnd)
+                prevAddr = inst.address
+            # Last inst get default size 2
+            self.addr2Inst[prevAddr].size = 2
+
+        for addr, inst in self.addr2Inst.items():
+            inst.accept(self)
+
+    def enter(self, address: int) -> None:
+        if address < 0 or address >= self.programEnd:
+            log.error('Unable to enter instruction at %d' % address)
+
+        self.addr2Inst[address].start = True
+
+    def branch(self, inst: isn.Instruction) -> None:
+        branchToAddr = inst.findAddrInInst()
+        self.addr2Inst[inst.address].branchTo = branchToAddr
+        log.info('Found branch from %d to %d' % (inst.address, branchToAddr))
+        self.enter(branchToAddr)
+        self.enter(inst.address + inst.size)
+
+    def call(self, inst: isn.Instruction) -> None:
+        callAddr = inst.findAddrInInst()
+        self.addr2Inst[inst.address].call = True
+        self.addr2Inst[inst.address].branchTo = callAddr
+        log.info('Found call from %d to %d' % (inst.address, callAddr))
+        self.enter(callAddr)
+        self.enter(inst.address + inst.size)
+
+    def jump(self, inst: isn.Instruction) -> None:
+        jumpAddr = inst.findAddrInst()
+        self.addr2Inst[inst.address].fallThrough = False
+        self.addr2Inst[inst.address].branchTo = jumpAddr
+        log.info('Found jump from %d to %d' % (inst.address, jumpAddr))
+        self.enter(jumpAddr)
+        self.enter(inst.address + inst.size)
+
+    def end(self, inst: isn.Instruction) -> None:
+        self.addr2Inst[inst.address].fallThrough = False
+        log.info('Found end at %d' % (inst.address))
+        self.enter(inst.address + inst.size)
+
+    def visitDefault(self, inst: isn.Instruction) -> None:
+        pass
+
+    def visitAdd(self, inst: isn.Instruction) -> None:
+        self.add(inst)
+
+    def visitAlign(self, inst: isn.Instruction) -> None:
+        self.add(inst)
 
     def connectBlocks(self) -> None:
         pass

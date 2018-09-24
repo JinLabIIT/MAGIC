@@ -20,7 +20,10 @@ class Instruction(object):
         self.ret: bool = False
 
     def accept(self, builder: cfg_builder.ControlFlowGraphBuilder):
-        builder.visit(self)
+        builder.visitDefault(self)
+
+    def findAddrInInst(self) -> int:
+        return None
 
 
 class AddInst(Instruction):
