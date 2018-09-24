@@ -2,6 +2,7 @@
 import glog as log
 import cfg_builder
 from typing import List
+from utils import findAddrInOperators
 
 
 class Instruction(object):
@@ -37,9 +38,6 @@ class AddInst(Instruction):
 
         self.operators: List[str] = operators
 
-    def accept(self, builder: cfg_builder.ControlFlowGraphBuilder):
-        builder.visitAdd(self)
-
 
 class AlignInst(Instruction):
     """align op1"""
@@ -52,9 +50,6 @@ class AlignInst(Instruction):
 
         self.operators: str = operators[0]
 
-    def accept(self, builder: cfg_builder.ControlFlowGraphBuilder):
-        builder.visitAlign(self)
-
 
 class AndInst(Instruction):
     """and op1, op2"""
@@ -66,9 +61,6 @@ class AndInst(Instruction):
             log.debug('Invalid operators for add inst: %s' % operators)
 
         self.operators: List[str] = operators
-
-    def accept(self, builder: cfg_builder.ControlFlowGraphBuilder):
-        builder.visitAnd(self)
 
 
 class CallInst(Instruction):
@@ -85,6 +77,9 @@ class CallInst(Instruction):
     def accept(self, builder: cfg_builder.ControlFlowGraphBuilder):
         builder.visitCall(self)
 
+    def findAddrInInst(self):
+        return findAddrInOperators(self.operators)
+
 
 class CdqInst(Instruction):
     """cdq: convert doubleword to quadword"""
@@ -94,9 +89,6 @@ class CdqInst(Instruction):
         self.operand = 'cdq'
         if len(operators) != 0:
             log.debug('Invalid operators for cdq inst: %s' % operators)
-
-    def accept(self, builder: cfg_builder.ControlFlowGraphBuilder):
-        builder.visitCdq(self)
 
 
 class CmpInst(Instruction):
@@ -110,9 +102,6 @@ class CmpInst(Instruction):
 
         self.operators = operators
 
-    def accept(self, builder: cfg_builder.ControlFlowGraphBuilder):
-        builder.visitCmp(self)
-
 
 class DbInst(Instruction):
     """db ..."""
@@ -122,9 +111,6 @@ class DbInst(Instruction):
         self.operand = 'db'
         self.operators = operators
 
-    def accept(self, builder: cfg_builder.ControlFlowGraphBuilder):
-        builder.visitDb(self)
-
 
 class DdInst(Instruction):
     """dd ..."""
@@ -133,9 +119,6 @@ class DdInst(Instruction):
         super(DdInst, self).__init__(addr)
         self.operand = 'dd'
         self.operators = operators
-
-    def accept(self, builder: cfg_builder.ControlFlowGraphBuilder):
-        builder.visitDd(self)
 
 
 class DecInst(Instruction):
@@ -149,9 +132,6 @@ class DecInst(Instruction):
 
         self.operators = operators
 
-    def accept(self, builder: cfg_builder.ControlFlowGraphBuilder):
-        builder.visitDec(self)
-
 
 class DivInst(Instruction):
     """div  op1"""
@@ -164,9 +144,6 @@ class DivInst(Instruction):
 
         self.operators = operators
 
-    def accept(self, builder: cfg_builder.ControlFlowGraphBuilder):
-        builder.visitDiv(self)
-
 
 class DwInst(Instruction):
     """dw op1"""
@@ -175,9 +152,6 @@ class DwInst(Instruction):
         super(DwInst(addr, operators), self).__init__(addr)
         self.operand = 'dw'
         self.operators = operators
-
-    def accept(self, builder: cfg_builder.ControlFlowGraphBuilder):
-        builder.visit(self)
 
 
 class FdivrpInst(Instruction):
@@ -191,8 +165,107 @@ class FdivrpInst(Instruction):
 
         self.operators = operators
 
+
+class JmpInst(Instruction):
+    """jmp [short] addr"""
+
+    def __init__(self, addr: str, operators: List[str]) -> None:
+        super(JmpInst, self).__init__(addr)
+        self.operand = 'jmp'
+        if len(operators) != 1:
+            log.debug('Invalid operators for jmp inst: %s' % operators)
+
+        self.operators: List[str] = operators
+
     def accept(self, builder: cfg_builder.ControlFlowGraphBuilder):
-        builder.visitFdivrp(self)
+        builder.visitJmp(self)
+
+    def findAddrInInst(self):
+        return findAddrInOperators(self.operators)
+
+
+class JnzInst(Instruction):
+    """jnz op1, op2"""
+
+    def __init__(self, addr: str, operators: List[str]) -> None:
+        super(JnzInst, self).__init__(addr)
+        self.operand = 'jnz'
+        if len(operators) != 1:
+            log.debug('Invalid operators for jnz inst: %s' % operators)
+
+        self.operators: List[str] = operators
+
+    def accept(self, builder: cfg_builder.ControlFlowGraphBuilder):
+        builder.visitJnz(self)
+
+    def findAddrInInst(self):
+        return findAddrInOperators(self.operators)
+
+
+class LeaInst(Instruction):
+    """lea op1, op2"""
+
+    def __init__(self, addr: str, operators: List[str]) -> None:
+        super(LeaInst, self).__init__(addr)
+        self.operand = 'lea'
+        if len(operators) != 2:
+            log.debug('Invalid operators for lea inst: %s' % operators)
+
+        self.operators: List[str] = operators
+
+
+class MovInst(Instruction):
+    """mov op1, op2"""
+
+    def __init__(self, addr: str, operators: List[str]) -> None:
+        super(MovInst, self).__init__(addr)
+        self.operand = 'mov'
+        if len(operators) != 2:
+            log.debug('Invalid operators for mov inst: %s' % operators)
+
+        self.operators: List[str] = operators
+
+
+class RetiInst(Instruction):
+    """reti"""
+
+    def __init__(self, addr: str, operators: List[str]) -> None:
+        super(RetiInst, self).__init__(addr)
+        self.operand = 'reti'
+        if len(operators) != 0:
+            log.debug('Invalid operators for reti inst: %s' % operators)
+
+        self.operators: List[str] = operators
+
+    def accept(self, builder: cfg_builder.ControlFlowGraphBuilder):
+        builder.visitReti(self)
+
+
+class RetnInst(Instruction):
+    """retn op1, op2"""
+
+    def __init__(self, addr: str, operators: List[str]) -> None:
+        super(RetnInst, self).__init__(addr)
+        self.operand = 'retn'
+        if len(operators) != 1:
+            log.debug('Invalid operators for retn inst: %s' % operators)
+
+        self.operators: List[str] = operators
+
+    def accept(self, builder: cfg_builder.ControlFlowGraphBuilder):
+        builder.visitRetn(self)
+
+
+class SubInst(Instruction):
+    """sub op1, op2"""
+
+    def __init__(self, addr: str, operators: List[str]) -> None:
+        super(SubInst, self).__init__(addr)
+        self.operand = 'sub'
+        if len(operators) != 2:
+            log.debug('Invalid operators for sub inst: %s' % operators)
+
+        self.operators: List[str] = operators
 
 
 class InstBuilder(object):

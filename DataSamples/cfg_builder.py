@@ -3,9 +3,10 @@ import re
 import glog as log
 import networkx as nx
 import pandas as pd
+import instructions as isn
+from utils import FakeCalleeAddr
 from collections import OrderedDict
 from typing import List, Dict
-import instructions as isn
 
 
 class Block(object):
@@ -30,6 +31,7 @@ class ControlFlowGraphBuilder(object):
         self.addr2Inst: OrderedDict[int, isn.Instruction] = {}
         self.program: Dict[str, str] = {}  # Addr to raw string instruction
         self.programEnd: int = -1
+        self.programStart: int = -1
 
     def build(self) -> None:
         self.extractTextSeg()
@@ -141,7 +143,7 @@ class ControlFlowGraphBuilder(object):
             self.program[addr] = foundDataDeclare
             log.debug('Convert data declare into general format')
         else:
-            log.error('Unable to aggregate instructions for addr %s:' % addr)
+            log.error(f'Unable to aggregate instructions for addr {addr}')
             for inst in validInst:
                 log.error('%s: %s' % (addr, inst))
 
@@ -178,36 +180,46 @@ class ControlFlowGraphBuilder(object):
                     self.addr2Inst[prevAddr].size = inst.address - prevAddr
 
                 self.addr2Inst[inst.address] = inst
+                if self.programStart == -1:
+                    self.programStart = inst.address
                 self.programEnd = max(inst.address, self.programEnd)
                 prevAddr = inst.address
             # Last inst get default size 2
             self.addr2Inst[prevAddr].size = 2
 
+        log.info(f'Program starts at {self.programStart} \
+                 ends at {self.programEnd}')
         for addr, inst in self.addr2Inst.items():
             inst.accept(self)
 
     def enter(self, address: int) -> None:
         if address < 0 or address >= self.programEnd:
             log.error('Unable to enter instruction at %d' % address)
+            return
 
         self.addr2Inst[address].start = True
 
-    def branch(self, inst: isn.Instruction) -> None:
+    def branch(self, inst) -> None:
         branchToAddr = inst.findAddrInInst()
         self.addr2Inst[inst.address].branchTo = branchToAddr
         log.info('Found branch from %d to %d' % (inst.address, branchToAddr))
         self.enter(branchToAddr)
         self.enter(inst.address + inst.size)
 
-    def call(self, inst: isn.Instruction) -> None:
-        callAddr = inst.findAddrInInst()
+    def call(self, inst) -> None:
         self.addr2Inst[inst.address].call = True
+        # Likely NOT able to find callee's address
+        callAddr = inst.findAddrInInst()
+        if callAddr != FakeCalleeAddr:
+            log.info(f'Found call from {inst.address} to {callAddr}')
+        else:
+            log.info(f'Fake call from {inst.address} to {FakeCalleeAddr}')
+
         self.addr2Inst[inst.address].branchTo = callAddr
-        log.info('Found call from %d to %d' % (inst.address, callAddr))
         self.enter(callAddr)
         self.enter(inst.address + inst.size)
 
-    def jump(self, inst: isn.Instruction) -> None:
+    def jump(self, inst) -> None:
         jumpAddr = inst.findAddrInst()
         self.addr2Inst[inst.address].fallThrough = False
         self.addr2Inst[inst.address].branchTo = jumpAddr
@@ -215,19 +227,28 @@ class ControlFlowGraphBuilder(object):
         self.enter(jumpAddr)
         self.enter(inst.address + inst.size)
 
-    def end(self, inst: isn.Instruction) -> None:
+    def end(self, inst) -> None:
         self.addr2Inst[inst.address].fallThrough = False
         log.info('Found end at %d' % (inst.address))
         self.enter(inst.address + inst.size)
 
-    def visitDefault(self, inst: isn.Instruction) -> None:
+    def visitDefault(self, inst) -> None:
         pass
 
-    def visitAdd(self, inst: isn.Instruction) -> None:
-        self.add(inst)
+    def visitCall(self, inst) -> None:
+        self.call(inst)
 
-    def visitAlign(self, inst: isn.Instruction) -> None:
-        self.add(inst)
+    def visitJmp(self, inst) -> None:
+        self.jump(inst)
+
+    def visitJnz(self, inst) -> None:
+        self.jump(inst)
+
+    def visitReti(self, inst) -> None:
+        self.end(inst)
+
+    def visitRetn(self, inst) -> None:
+        self.end(inst)
 
     def connectBlocks(self) -> None:
         pass
@@ -247,8 +268,10 @@ def exportSeenInst(seenInst: set):
 
 if __name__ == '__main__':
     log.setLevel("INFO")
-    binaryIds = ['0A32eTdBKayjCWhZqDOQ', '01azqd4InC7m9JpocGv5',
-                 '0ACDbR5M3ZhBJajygTuf']
+    binaryIds = [
+        'test',
+        ]
+    # '0A32eTdBKayjCWhZqDOQ', '01azqd4InC7m9JpocGv5', '0ACDbR5M3ZhBJajygTuf']
     seenInst = set()
     for bId in binaryIds:
         log.info('Processing ' + bId + '.asm')
