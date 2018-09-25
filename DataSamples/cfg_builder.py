@@ -4,6 +4,7 @@ import glog as log
 import networkx as nx
 import pandas as pd
 import instructions as isn
+import matplotlib.pyplot as plt
 from utils import FakeCalleeAddr
 from collections import OrderedDict
 from typing import List, Dict
@@ -17,7 +18,7 @@ class Block(object):
         self.startAddr = -1
         self.endAddr = -1
         self.instList: List[isn.Instruction] = []
-        self.edgeList: List[Block] = []
+        self.edgeList: List[int] = []
 
 
 class ControlFlowGraphBuilder(object):
@@ -28,16 +29,19 @@ class ControlFlowGraphBuilder(object):
         self.cfg = nx.Graph()
         self.instBuilder: isn.InstBuilder = isn.InstBuilder()
         self.binaryId: str = binaryId
-        self.addr2Inst: OrderedDict[int, isn.Instruction] = {}
-        self.program: Dict[str, str] = {}  # Addr to raw string instruction
         self.programEnd: int = -1
         self.programStart: int = -1
+
+        self.program: Dict[str, str] = {}  # Addr to raw string instruction
+        self.addr2Inst: OrderedDict[int, isn.Instruction] = OrderedDict()
+        self.addr2Block: Dict[int, Block] = {}
 
     def build(self) -> None:
         self.extractTextSeg()
         self.createProgram()
         self.discoverEntries()
         self.connectBlocks()
+        self.exportToNxGraph()
 
     def extractTextSeg(self) -> None:
         """Extract text segment from .asm file"""
@@ -148,36 +152,34 @@ class ControlFlowGraphBuilder(object):
                 log.error('%s: %s' % (addr, inst))
 
     def createProgram(self) -> None:
+        """Generate unique-addressed program, store in self.program"""
         currAddr = -1
         sameAddrInsts = []
-        txtFile = open(self.binaryId + ".txt", 'r')
-        for line in txtFile:
-            elems = line.rstrip('\n').split(' ')
-            addr, inst = elems[0], elems[1:]
-            if currAddr == -1:
-                currAddr = addr
-                sameAddrInsts.append(" ".join(inst))
-            else:
-                if addr != currAddr:
-                    log.debug("Aggreate %d insts for addr %s" %
-                              (len(sameAddrInsts), currAddr))
-                    self.aggregate(currAddr, sameAddrInsts)
-                    sameAddrInsts.clear()
+        with open(self.binaryId + ".txt", 'r') as txtFile:
+            for line in txtFile:
+                elems = line.rstrip('\n').split(' ')
+                addr, inst = elems[0], elems[1:]
+                if currAddr == -1:
+                    currAddr = addr
+                    sameAddrInsts.append(" ".join(inst))
+                else:
+                    if addr != currAddr:
+                        log.debug(f"Aggreate {len(sameAddrInsts)} insts for addr {currAddr}")
+                        self.aggregate(currAddr, sameAddrInsts)
+                        sameAddrInsts.clear()
 
-                currAddr = addr
-                sameAddrInsts.append(" ".join(inst))
+                    currAddr = addr
+                    sameAddrInsts.append(" ".join(inst))
 
-        if len(sameAddrInsts) > 0:
-            log.debug("Aggreate %d insts for addr %s" %
-                      (len(sameAddrInsts), currAddr))
-            self.aggregate(currAddr, sameAddrInsts)
-            sameAddrInsts.clear()
+            if len(sameAddrInsts) > 0:
+                log.debug(f"Aggreate {len(sameAddrInsts)} insts for addr {currAddr}")
+                self.aggregate(currAddr, sameAddrInsts)
+                sameAddrInsts.clear()
 
-        txtFile.close()
-        self.saveProgram()
+            self.saveProgram()
 
     def discoverEntries(self) -> None:
-        """Create Instruction object for each address"""
+        """Create Instruction object for each address, store in addr2Inst"""
         prevAddr = -1
         with open(self.binaryId + '.prog', 'r') as progFile:
             for line in progFile:
@@ -202,7 +204,7 @@ class ControlFlowGraphBuilder(object):
         if address < 0 or address >= self.programEnd:
             log.error(f'Unable to enter instruction at {address:x}')
         else:
-            log.error(f'Enter instruction at {address:x}')
+            log.info(f'Enter instruction at {address:x}')
             self.addr2Inst[address].start = True
 
     def branch(self, inst) -> None:
@@ -248,7 +250,7 @@ class ControlFlowGraphBuilder(object):
         self.jump(inst)
 
     def visitJnz(self, inst) -> None:
-        self.jump(inst)
+        self.branch(inst)
 
     def visitReti(self, inst) -> None:
         self.end(inst)
@@ -256,8 +258,63 @@ class ControlFlowGraphBuilder(object):
     def visitRetn(self, inst) -> None:
         self.end(inst)
 
+    def getBlockAtAddr(self, addr: int) -> Block:
+        if addr not in self.addr2Block:
+            block = Block()
+            block.startAddr = addr
+            self.addr2Block[addr] = block
+            log.info(f'Create new block starting at {addr:x}')
+
+        return self.addr2Block[addr]
+
     def connectBlocks(self) -> None:
-        pass
+        """Group instructions into blocks connected based on branch and fall through"""
+        log.info('**** Create and connecting blocks ****')
+        currBlock = None
+        for (addr, inst) in sorted(self.addr2Inst.items()):
+            if currBlock is None or inst.start is True:
+                currBlock = self.getBlockAtAddr(addr)
+            nextAddr = addr + inst.size
+            nextBlock = currBlock
+            if nextAddr in self.addr2Inst:
+                nextInst = self.addr2Inst[nextAddr]
+                if inst.fallThrough is True and nextInst.start is True:
+                    nextBlock = self.getBlockAtAddr(nextAddr)
+                    currBlock.edgeList.append(nextBlock.startAddr)
+                    log.info(f'block {currBlock.startAddr:x} => next {nextBlock.startAddr:x}')
+
+            if inst.branchTo > 0 or inst.branchTo == FakeCalleeAddr:
+                block = self.getBlockAtAddr(inst.branchTo)
+                currBlock.edgeList.append(block.startAddr)
+                log.info(f'block {currBlock.startAddr:x} => branch {block.startAddr:x}')
+
+            currBlock.instList.append(inst)
+            currBlock.endAddr = max(currBlock.endAddr, inst.address)
+            self.addr2Block[currBlock.startAddr] = currBlock
+            currBlock = nextBlock
+
+    def exportToNxGraph(self):
+        """Assume block/node is represented by its startAddr"""
+        for (addr, block) in self.addr2Block.items():
+            self.cfg.add_node(addr, block=block)
+
+        for (addr, block) in self.addr2Block.items():
+            for neighboor in block.edgeList:
+                self.cfg.add_edge(addr, neighboor)
+
+        log.debug(f'#nodes in cfg: {nx.number_of_nodes(self.cfg)}')
+        log.debug(f'#edges in cfg: {nx.number_of_edges(self.cfg)}')
+
+    def drawCfg(self) -> None:
+        nx.draw(self.cfg)
+        plt.show()
+
+    def printCfg(self):
+        log.info('**** Print CFG ****')
+        for (addr, block) in sorted(self.addr2Block.items()):
+            log.info(f'block {addr:x} [{block.startAddr:x}, {block.endAddr:x}]')
+            for neighboor in block.edgeList:
+                log.info(f'block {addr:x} -> {neighboor:x}')
 
     def saveProgram(self) -> None:
         progFile = open(self.binaryId + '.prog', 'w')
