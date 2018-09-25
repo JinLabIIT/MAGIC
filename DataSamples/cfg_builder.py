@@ -180,6 +180,7 @@ class ControlFlowGraphBuilder(object):
                     self.addr2Inst[prevAddr].size = inst.address - prevAddr
 
                 self.addr2Inst[inst.address] = inst
+                log.info(f'{inst.address} {inst.operand}')
                 if self.programStart == -1:
                     self.programStart = inst.address
                 self.programEnd = max(inst.address, self.programEnd)
@@ -187,22 +188,21 @@ class ControlFlowGraphBuilder(object):
             # Last inst get default size 2
             self.addr2Inst[prevAddr].size = 2
 
-        log.info(f'Program starts at {self.programStart} \
-                 ends at {self.programEnd}')
+        log.info(f'Program starts at {self.programStart:x} ends at {self.programEnd:x}')
         for addr, inst in self.addr2Inst.items():
             inst.accept(self)
 
     def enter(self, address: int) -> None:
         if address < 0 or address >= self.programEnd:
-            log.error('Unable to enter instruction at %d' % address)
-            return
-
-        self.addr2Inst[address].start = True
+            log.error(f'Unable to enter instruction at {address:x}')
+        else:
+            log.error(f'Enter instruction at {address:x}')
+            self.addr2Inst[address].start = True
 
     def branch(self, inst) -> None:
         branchToAddr = inst.findAddrInInst()
         self.addr2Inst[inst.address].branchTo = branchToAddr
-        log.info('Found branch from %d to %d' % (inst.address, branchToAddr))
+        log.info(f'Found branch from {inst.address:x} to {branchToAddr:x}')
         self.enter(branchToAddr)
         self.enter(inst.address + inst.size)
 
@@ -211,25 +211,25 @@ class ControlFlowGraphBuilder(object):
         # Likely NOT able to find callee's address
         callAddr = inst.findAddrInInst()
         if callAddr != FakeCalleeAddr:
-            log.info(f'Found call from {inst.address} to {callAddr}')
+            log.info(f'Found call from {inst.address:x} to {callAddr:x}')
         else:
-            log.info(f'Fake call from {inst.address} to {FakeCalleeAddr}')
+            log.info(f'Fake call from {inst.address:x} to FakeCalleeAddr')
 
         self.addr2Inst[inst.address].branchTo = callAddr
         self.enter(callAddr)
         self.enter(inst.address + inst.size)
 
     def jump(self, inst) -> None:
-        jumpAddr = inst.findAddrInst()
+        jumpAddr = inst.findAddrInInst()
         self.addr2Inst[inst.address].fallThrough = False
         self.addr2Inst[inst.address].branchTo = jumpAddr
-        log.info('Found jump from %d to %d' % (inst.address, jumpAddr))
+        log.info(f'Found jump from {inst.address:x} to {jumpAddr:x}')
         self.enter(jumpAddr)
         self.enter(inst.address + inst.size)
 
     def end(self, inst) -> None:
         self.addr2Inst[inst.address].fallThrough = False
-        log.info('Found end at %d' % (inst.address))
+        log.info(f'Found end at {inst.address:x}')
         self.enter(inst.address + inst.size)
 
     def visitDefault(self, inst) -> None:

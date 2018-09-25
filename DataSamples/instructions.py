@@ -2,7 +2,7 @@
 import glog as log
 import cfg_builder
 from typing import List
-from utils import findAddrInOperators
+from utils import findAddrInOperators, FakeCalleeAddr
 
 
 class Instruction(object):
@@ -48,7 +48,7 @@ class AlignInst(Instruction):
         if len(operators) != 1:
             log.debug('Invalid operators for align inst: %s' % operators)
 
-        self.operators: str = operators[0]
+        self.operators: str = operators
 
 
 class AndInst(Instruction):
@@ -72,13 +72,18 @@ class CallInst(Instruction):
         if len(operators) != 1:
             log.debug('Invalid operators for call inst: %s' % operators)
 
-        self.operators: str = operators[0]
+        self.operators: str = operators
 
     def accept(self, builder: cfg_builder.ControlFlowGraphBuilder):
         builder.visitCall(self)
 
     def findAddrInInst(self):
-        return findAddrInOperators(self.operators)
+        log.info(self.operators)
+        addr = findAddrInOperators(self.operators)
+        if addr < 0:
+            return FakeCalleeAddr
+        else:
+            return addr
 
 
 class CdqInst(Instruction):
@@ -288,5 +293,21 @@ class InstBuilder(object):
         self.seenInst.add(operand)
         if operand == 'add':
             return AddInst(address, operators)
+        elif operand == 'call':
+            return CallInst(address, operators)
+        elif operand == 'jmp':
+            return JmpInst(address, operators)
+        elif operand == 'jnz':
+            return JnzInst(address, operators)
+        elif operand == 'lea':
+            return LeaInst(address, operators)
+        elif operand == 'mov':
+            return MovInst(address, operators)
+        elif operand == 'reti':
+            return RetiInst(address, operators)
+        elif operand == 'retn':
+            return RetnInst(address, operators)
+        elif operand == 'sub':
+            return SubInst(address, operators)
         else:
             return Instruction(address)
