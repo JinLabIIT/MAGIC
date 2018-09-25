@@ -2,7 +2,7 @@
 import glog as log
 import cfg_builder
 from typing import List
-from utils import findAddrInOperators, FakeCalleeAddr
+from utils import findAddrInOperators, FakeCalleeAddr, AddrNotFound
 
 
 class Instruction(object):
@@ -15,7 +15,7 @@ class Instruction(object):
         self.operand: str = None
 
         self.start: bool = False
-        self.branchTo: int = -1
+        self.branchTo: int = AddrNotFound
         self.fallThrough: bool = True
         self.call: bool = False
         self.ret: bool = False
@@ -78,7 +78,6 @@ class CallInst(Instruction):
         builder.visitCall(self)
 
     def findAddrInInst(self):
-        log.info(self.operators)
         addr = findAddrInOperators(self.operators)
         if addr < 0:
             return FakeCalleeAddr
