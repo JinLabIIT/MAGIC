@@ -167,6 +167,12 @@ class ControlFlowGraphBuilder(object):
                 currAddr = addr
                 sameAddrInsts.append(" ".join(inst))
 
+        if len(sameAddrInsts) > 0:
+            log.debug("Aggreate %d insts for addr %s" %
+                      (len(sameAddrInsts), currAddr))
+            self.aggregate(currAddr, sameAddrInsts)
+            sameAddrInsts.clear()
+
         txtFile.close()
         self.saveProgram()
 

@@ -8,22 +8,14 @@ AddrNotFound = -1
 FakeCalleeAddr = -2
 
 
-def representsInt(s: str) -> bool:
-    try:
-        log.info(f'{s} is convertiable to hex int')
-        int(s, 16)
-        return True
-    except ValueError:
-        log.debug(f'{s} is NOT convertiable to hex int')
-        return False
-
-
 def findAddrInOperators(operators: List[str]) -> int:
-    log.info(operators)
+    hexPattern = re.compile(r'[0-9A-Fa-f]+')
     for item in operators:
-        log.info(item.split('_'))
         for part in item.split('_'):
-            if len(part) > 0 and representsInt(part) is True:
+            if hexPattern.match(part):
+                log.info(f'{part} is convertiable to hex int')
                 return int(part, 16)
+            else:
+                log.debug(f'{part} is NOT convertiable to hex int')
 
     return AddrNotFound

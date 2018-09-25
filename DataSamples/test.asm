@@ -19,6 +19,6 @@
 .text:00401079 8A 08		mov     cl, [eax]
 .text:0040107A 40 45		add     eax, 55h
 .text:0040107C 84 C9		call    _memcpy_s
-.text:0040107E 75 F9		jnz     short loc_401077 ; jmp to wait
+.text:0040107E 75 F9		jnz     short loc_401079 ; jmp to wait
 .text:00401080 2B C2		sub     eax, edx
 .text:00401082 C3 45		retn    4
