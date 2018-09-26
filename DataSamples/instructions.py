@@ -230,6 +230,30 @@ class MovInst(Instruction):
         self.operators: List[str] = operators
 
 
+class PushInst(Instruction):
+    """push op1"""
+
+    def __init__(self, addr: str, operators: List[str]) -> None:
+        super(PushInst, self).__init__(addr)
+        self.operand = 'push'
+        if len(operators) != 1:
+            log.debug('Invalid operators for push inst: %s' % operators)
+
+        self.operators: List[str] = operators
+
+
+class PopInst(Instruction):
+    """pop op1"""
+
+    def __init__(self, addr: str, operators: List[str]) -> None:
+        super(PopInst, self).__init__(addr)
+        self.operand = 'pop'
+        if len(operators) != 1:
+            log.debug('Invalid operators for pop inst: %s' % operators)
+
+        self.operators: List[str] = operators
+
+
 class RetiInst(Instruction):
     """reti"""
 
@@ -272,6 +296,18 @@ class SubInst(Instruction):
         self.operators: List[str] = operators
 
 
+class XorInst(Instruction):
+    """xor op1, op2"""
+
+    def __init__(self, addr: str, operators: List[str]) -> None:
+        super(XorInst, self).__init__(addr)
+        self.operand = 'xor'
+        if len(operators) != 2:
+            log.debug('Invalid operators for xor inst: %s' % operators)
+
+        self.operators: List[str] = operators
+
+
 class InstBuilder(object):
     """Create instructions based on string content"""
 
@@ -302,11 +338,17 @@ class InstBuilder(object):
             return LeaInst(address, operators)
         elif operand == 'mov':
             return MovInst(address, operators)
+        elif operand == 'push':
+            return PushInst(address, operators)
+        elif operand == 'pop':
+            return PopInst(address, operators)
         elif operand == 'reti':
             return RetiInst(address, operators)
         elif operand == 'retn':
             return RetnInst(address, operators)
         elif operand == 'sub':
             return SubInst(address, operators)
+        elif operand == 'xor':
+            return XorInst(address, operators)
         else:
             return Instruction(address)

@@ -26,7 +26,7 @@ class ControlFlowGraphBuilder(object):
 
     def __init__(self, binaryId: str) -> None:
         super(ControlFlowGraphBuilder, self).__init__()
-        self.cfg = nx.Graph()
+        self.cfg = nx.DiGraph()
         self.instBuilder: isn.InstBuilder = isn.InstBuilder()
         self.binaryId: str = binaryId
         self.programEnd: int = -1
@@ -188,7 +188,7 @@ class ControlFlowGraphBuilder(object):
                     self.addr2Inst[prevAddr].size = inst.address - prevAddr
 
                 self.addr2Inst[inst.address] = inst
-                log.info(f'{inst.address} {inst.operand}')
+                log.info(f'{inst.address:x} {inst.operand}')
                 if self.programStart == -1:
                     self.programStart = inst.address
                 self.programEnd = max(inst.address, self.programEnd)
@@ -296,17 +296,17 @@ class ControlFlowGraphBuilder(object):
     def exportToNxGraph(self):
         """Assume block/node is represented by its startAddr"""
         for (addr, block) in self.addr2Block.items():
-            self.cfg.add_node(addr, block=block)
+            self.cfg.add_node('%8X' % addr, block=block)
 
         for (addr, block) in self.addr2Block.items():
             for neighboor in block.edgeList:
-                self.cfg.add_edge(addr, neighboor)
+                self.cfg.add_edge('%8X' % addr, '%8X' % neighboor)
 
         self.printCfg()
 
     def drawCfg(self) -> None:
-        nx.draw(self.cfg)
-        plt.show()
+        nx.draw(nx.Graph(self.cfg), with_labels=True, font_weight='bold')
+        plt.savefig('%s.pdf' % self.binaryId, format='pdf')
 
     def printCfg(self):
         log.info('**** Print CFG ****')
@@ -316,6 +316,8 @@ class ControlFlowGraphBuilder(object):
             log.info(f'block {addr:x} [{block.startAddr:x}, {block.endAddr:x}]')
             for neighboor in block.edgeList:
                 log.info(f'block {addr:x} -> {neighboor:x}')
+
+        self.drawCfg()
 
     def saveProgram(self) -> None:
         progFile = open(self.binaryId + '.prog', 'w')
