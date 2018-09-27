@@ -18,17 +18,3 @@ def findAddrInOperators(operators: List[str]) -> int:
                 log.debug(f'"{part}" is NOT convertiable to hex int')
 
     return AddrNotFound
-
-
-def discoverInstDictionary():
-    binaryIds = ['test']
-    seenInst = set()
-    for bId in binaryIds:
-        log.info('Processing ' + bId + '.asm')
-        cfgBuilder = ControlFlowGraphBuilder(bId)
-        cfgBuilder.build()
-        log.debug('%d unique insts in %s.asm' % (len(
-            cfgBuilder.instBuilder.seenInst), bId))
-        seenInst = seenInst.union(cfgBuilder.instBuilder.seenInst)
-
-    exportSeenInst(seenInst)

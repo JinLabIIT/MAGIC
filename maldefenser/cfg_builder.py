@@ -3,7 +3,6 @@ import re
 import os
 import glog as log
 import networkx as nx
-import pandas as pd
 import instructions as isn
 import matplotlib.pyplot as plt
 from utils import FakeCalleeAddr
@@ -25,11 +24,12 @@ class Block(object):
 class ControlFlowGraphBuilder(object):
     """For building a control flow graph from a program"""
 
-    def __init__(self, binaryId: str) -> None:
+    def __init__(self, binaryId: str, pathPrefix: str) -> None:
         super(ControlFlowGraphBuilder, self).__init__()
         self.cfg = nx.DiGraph()
         self.instBuilder: isn.InstBuilder = isn.InstBuilder()
         self.binaryId: str = binaryId
+        self.filePrefix: str = pathPrefix + '/' + binaryId
         self.programEnd: int = -1
         self.programStart: int = -1
 
@@ -38,17 +38,17 @@ class ControlFlowGraphBuilder(object):
         self.addr2Block: Dict[int, Block] = {}
 
     def build(self) -> None:
-        self.buildInstructions()
-        self.buildBlocks()
+        self.parseInstructions()
+        self.parseBlocks()
 
-    def buildInstructions(self) -> None:
+    def parseInstructions(self) -> None:
         """First pass on instructions"""
         self.extractTextSeg()
         self.createProgram()
         self.discoverInsts()
         self.clearTmpFiles()
 
-    def buildBlocks(self) -> None:
+    def parseBlocks(self) -> None:
         """Second pass on blocks"""
         self.visitInsts()
         self.connectBlocks()
@@ -58,10 +58,10 @@ class ControlFlowGraphBuilder(object):
         """Extract text segment from .asm file"""
         log.info(f'**** Extract .text segment from {self.binaryId}.asm ****')
         lineNum = 1
-        bytePattern = re.compile(r'[A-Z0-9][A-Z0-9]')
+        bytePattern = re.compile(r'[A-F0-9][A-F0-9]')
         imcompleteByte = re.compile(r'\?\?')
-        fileInput = open(self.binaryId + '.asm', 'rb')
-        fileOutput = open(self.binaryId + '.txt', 'w')
+        fileInput = open(self.filePrefix + '.asm', 'rb')
+        fileOutput = open(self.filePrefix + '.txt', 'w')
         for line in fileInput:
             elems = line.split()
             decodedElems = [x.decode("utf-8", "ignore") for x in elems]
@@ -168,7 +168,7 @@ class ControlFlowGraphBuilder(object):
         log.info('**** Aggreate to unique-addressed instructions ****')
         currAddr = -1
         sameAddrInsts = []
-        with open(self.binaryId + ".txt", 'r') as txtFile:
+        with open(self.filePrefix + ".txt", 'r') as txtFile:
             for line in txtFile:
                 elems = line.rstrip('\n').split(' ')
                 addr, inst = elems[0], elems[1:]
@@ -195,7 +195,7 @@ class ControlFlowGraphBuilder(object):
         """Create Instruction object for each address, store in addr2Inst"""
         log.info('**** Discover instructions ****')
         prevAddr = -1
-        with open(self.binaryId + '.prog', 'r') as progFile:
+        with open(self.filePrefix + '.prog', 'r') as progFile:
             for line in progFile:
                 inst = self.instBuilder.createInst(line)
                 if prevAddr != -1:
@@ -339,7 +339,7 @@ class ControlFlowGraphBuilder(object):
         self.drawCfg()
 
     def saveProgram(self) -> None:
-        progFile = open(self.binaryId + '.prog', 'w')
+        progFile = open(self.filePrefix + '.prog', 'w')
         for (addr, inst) in self.program.items():
             progFile.write(addr + ' ' + inst + '\n')
         progFile.close()
@@ -347,25 +347,13 @@ class ControlFlowGraphBuilder(object):
     def clearTmpFiles(self) -> None:
         log.info('**** Remove temporary files ****')
         for ext in ['.txt', '.prog']:
-            os.remove(self.binaryId + ext)
-
-
-def exportSeenInst(seenInst: set):
-    instColumn = {'Inst': sorted(list(seenInst))}
-    df = pd.DataFrame(data=instColumn)
-    df.to_csv('seen_inst.csv')
+            os.remove(self.filePrefix + ext)
 
 
 if __name__ == '__main__':
     log.setLevel("INFO")
     binaryIds = ['test']
-    seenInst = set()
     for bId in binaryIds:
         log.info('Processing ' + bId + '.asm')
-        cfgBuilder = ControlFlowGraphBuilder(bId)
+        cfgBuilder = ControlFlowGraphBuilder(bId, '../DataSamples')
         cfgBuilder.build()
-        log.debug('%d unique insts in %s.asm' %
-                  (len(cfgBuilder.instBuilder.seenInst), bId))
-        seenInst = seenInst.union(cfgBuilder.instBuilder.seenInst)
-
-    exportSeenInst(seenInst)

@@ -1,6 +1,5 @@
 #!/usr/bin/python3.7
 import glog as log
-import cfg_builder
 from typing import List
 from utils import findAddrInOperators, FakeCalleeAddr, AddrNotFound
 
@@ -20,7 +19,7 @@ class Instruction(object):
         self.call: bool = False
         self.ret: bool = False
 
-    def accept(self, builder: cfg_builder.ControlFlowGraphBuilder):
+    def accept(self, builder):
         builder.visitDefault(self)
 
     def findAddrInInst(self) -> int:
@@ -74,7 +73,7 @@ class CallInst(Instruction):
 
         self.operators: str = operators
 
-    def accept(self, builder: cfg_builder.ControlFlowGraphBuilder):
+    def accept(self, builder):
         builder.visitCall(self)
 
     def findAddrInInst(self):
@@ -181,7 +180,7 @@ class JmpInst(Instruction):
 
         self.operators: List[str] = operators
 
-    def accept(self, builder: cfg_builder.ControlFlowGraphBuilder):
+    def accept(self, builder):
         builder.visitJmp(self)
 
     def findAddrInInst(self):
@@ -199,7 +198,7 @@ class JnzInst(Instruction):
 
         self.operators: List[str] = operators
 
-    def accept(self, builder: cfg_builder.ControlFlowGraphBuilder):
+    def accept(self, builder):
         builder.visitJnz(self)
 
     def findAddrInInst(self):
@@ -265,7 +264,7 @@ class RetiInst(Instruction):
 
         self.operators: List[str] = operators
 
-    def accept(self, builder: cfg_builder.ControlFlowGraphBuilder):
+    def accept(self, builder):
         builder.visitReti(self)
 
 
@@ -280,7 +279,7 @@ class RetnInst(Instruction):
 
         self.operators: List[str] = operators
 
-    def accept(self, builder: cfg_builder.ControlFlowGraphBuilder):
+    def accept(self, builder):
         builder.visitRetn(self)
 
 
