@@ -22,7 +22,7 @@
 .text:0040107E 75 F9		jnz     short loc_401079 ; jmp to wait
 .text:00401080 2B C2		sub     eax, edx
 .text:00401082 C3 45		retn    4
-.text:00401084   ; =============== S U B R O U T I N E =======================================
+.text:00401084   ; =============== S U B R O U T I N E ========================
 .text:00401084
 .text:00401084	 ; Attributes: bp-based frame
 .text:00401084
@@ -33,28 +33,28 @@
 .text:00401084
 .text:00401084 8B FF	    mov     edi, edi
 .text:00401086 8B 45 08		mov     eax, [ebp+arg_0]
-.text:00401088 56					push    esi
-.text:0040108A 33 F6			xor     esi, esi
-.text:0040108C 3B C6			cmp     eax, esi
-.text:0040108E 75 1D			jnz     short loc_4010A3
-.text:00401090 E8 CB 71	  call    __errno
-.text:00401092 56					push    esi
-.text:00401094 56					push    esi
-.text:00401096 C7 00      mov     dword ptr [eax],	16h
-.text:00401098 E8 38      call    __invalid_parameter
+.text:00401088 56			push    esi
+.text:0040108A 33 F6		xor     esi, esi
+.text:0040108C 3B C6		cmp     eax, esi
+.text:0040108E 75 1D		jnz     short loc_4010A3
+.text:00401090 E8 CB 71	    call    __errno
+.text:00401092 56			push    esi
+.text:00401094 56			push    esi
+.text:00401096 C7 00        mov     dword ptr [eax],	16h
+.text:00401098 E8 38        call    __invalid_parameter
 .text:0040109A 83 C4 14		add     esp, 14h
-.text:0040109C 6A 16			push    16h
-.text:0040109E 58					pop     eax
-.text:004010A1 EB 0A			jmp     short loc_4010A9
-.text:004010A3						       ; ---------------------------------------------------------------------------
+.text:0040109C 6A 16		push    16h
+.text:0040109E 58			pop     eax
+.text:004010A1 EB 0A		jmp     short loc_4010A9
+.text:004010A3				; ---------------------------------
 .text:004010A3
-.text:004010A3						loc_4010A3:			       ; CODE XREF: sub_41D2CF
-.text:004010A3 8B 0D      mov     ecx, dword_43DE14
-.text:004010A5 89 08			mov     [eax], ecx
-.text:004010A7 33 C0			xor     eax, eax
+.text:004010A3				loc_4010A3:			       ; CODE XREF: sub_41D2CF
+.text:004010A3 8B 0D        mov     ecx, dword_43DE14
+.text:004010A5 89 08		mov     [eax], ecx
+.text:004010A7 33 C0		xor     eax, eax
 .text:004010A9
-.text:004010A9						loc_4010A9:			       ; CODE XREF: sub_41D2CF
-.text:004010A9 5E					pop     esi
-.text:004010AB C3					retn
-.text:004010AB						sub_401084      endp
+.text:004010A9				loc_4010A9:			       ; CODE XREF: sub_41D2CF
+.text:004010A9 5E			pop     esi
+.text:004010AB C3			retn
+.text:004010AB				sub_401084      endp
 .text:004010AB

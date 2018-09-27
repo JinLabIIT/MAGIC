@@ -54,6 +54,13 @@ class ControlFlowGraphBuilder(object):
         self.connectBlocks()
         self.exportToNxGraph()
 
+    def addrInCodeSegment(self, seg: str) -> str:
+        for prefix in ['.text:', 'CODE:']:
+            if seg.startswith(prefix) is True:
+                return seg[len(prefix):]
+
+        return "NotInCodeSeg"
+
     def extractTextSeg(self) -> None:
         """Extract text segment from .asm file"""
         log.info(f'**** Extract .text segment from {self.binaryId}.asm ****')
@@ -66,12 +73,11 @@ class ControlFlowGraphBuilder(object):
             elems = line.split()
             decodedElems = [x.decode("utf-8", "ignore") for x in elems]
             seg = decodedElems.pop(0)
-            if seg.startswith('.text') is False:
+            addr = self.addrInCodeSegment(seg)
+            if addr is "NotInCodeSeg":
                 # Since text segment maynot always be the head, we cannot break
                 log.debug("Line %d is out of text segment" % lineNum)
                 continue
-            else:
-                addr = seg[6:]
 
             if len(decodedElems) > 0 and imcompleteByte.match(decodedElems[0]):
                 log.warning("Ignore imcomplete code at line %d: %s" %
@@ -96,10 +102,7 @@ class ControlFlowGraphBuilder(object):
 
             instElems = [addr] + decodedElems[startIdx: endIdx]
             if len(instElems) > 1:
-                log.debug("Processed line %d: '%s' => '%s'" %
-                          (lineNum,
-                           " ".join(decodedElems),
-                           " ".join(instElems)))
+                log.debug(f"Processed line {lineNum}: '{' '.join(decodedElems)}' => '{' '.join(instElems)}'")
                 fileOutput.write(" ".join(instElems) + '\n')
 
             lineNum += 1
@@ -323,9 +326,10 @@ class ControlFlowGraphBuilder(object):
         self.printCfg()
 
     def drawCfg(self) -> None:
-        log.info('**** Save graph plot to {self.binaryId}.pdf ****')
-        nx.draw(nx.Graph(self.cfg), with_labels=True, font_weight='normal')
-        plt.savefig('%s.pdf' % self.binaryId, format='pdf')
+        log.info(f'**** Save graph plot to {self.binaryId}.pdf ****')
+        nx.draw(self.cfg, with_labels=True, font_weight='normal')
+        plt.savefig('%s.pdf' % self.filePrefix, format='pdf')
+        plt.clf()
 
     def printCfg(self):
         log.info('**** Print CFG ****')
@@ -352,8 +356,9 @@ class ControlFlowGraphBuilder(object):
 
 if __name__ == '__main__':
     log.setLevel("INFO")
-    binaryIds = ['test']
+    pathPrefix = '../DataSamples'
+    binaryIds = ['test', 'exGy3iaKJmRprdHcB0NO']
     for bId in binaryIds:
         log.info('Processing ' + bId + '.asm')
-        cfgBuilder = ControlFlowGraphBuilder(bId, '../DataSamples')
+        cfgBuilder = ControlFlowGraphBuilder(bId, pathPrefix)
         cfgBuilder.build()

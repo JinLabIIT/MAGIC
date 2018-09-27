@@ -8,7 +8,7 @@ FakeCalleeAddr = -2
 
 
 def findAddrInOperators(operators: List[str]) -> int:
-    hexPattern = re.compile(r'$[1-9A-Fa-f][0-9A-Fa-f]*$')
+    hexPattern = re.compile(r'^[0-9A-Fa-f]+$')
     for item in operators:
         for part in item.split('_'):
             if hexPattern.match(part) is not None:

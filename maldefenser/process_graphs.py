@@ -42,7 +42,7 @@ class DataProvider(object):
 
 if __name__ == '__main__':
     log.setLevel("INFO")
-    pathPrefix = '../DataSamples'
+    pathPrefix = '../TrainSet'
     dataProvider = DataProvider(pathPrefix)
     binaryIds = dataProvider.getBinaryIds()
     log.info(f'{binaryIds}')
