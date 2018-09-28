@@ -7,6 +7,7 @@ class TestCfgBuildedr(unittest.TestCase):
     def test_parseInstructions(self):
         pathPrefix = '../TrainSet'
         binaryIds = [
+            '0A32eTdBKayjCWhZqDOQ',
             'exGy3iaKJmRprdHcB0NO',
             '0Q4ALVSRnlHUBjyOb1sw',
             'jERVLnaTwhHFrZbvNfCy',
@@ -14,6 +15,7 @@ class TestCfgBuildedr(unittest.TestCase):
             '0qjuDC7Rhx9rHkLlItAp',
             '65cjJpPCUQiLDRyXfWd4',
             '426c9FYfeVQbJnygpdKH',
+            '5RwWjtmMKlLiXqer8fHG',
         ]
         for bId in binaryIds:
             log.info('Processing ' + bId + '.asm')
@@ -22,7 +24,9 @@ class TestCfgBuildedr(unittest.TestCase):
 
     def test_build(self):
         pathPrefix = '../DataSamples'
-        binaryIds = ['test',]
+        binaryIds = [
+            'test',
+        ]
         for bId in binaryIds:
             log.info('Processing ' + bId + '.asm')
             cfgBuilder = ControlFlowGraphBuilder(bId, pathPrefix)

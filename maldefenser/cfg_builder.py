@@ -56,7 +56,7 @@ class ControlFlowGraphBuilder(object):
 
     def addrInCodeSegment(self, seg: str) -> str:
         segNames = ['.text:', 'CODE:', 'UPX1:', 'seg000:',
-                    '.brick:', '.icode:', 'seg001:', '.Much:']
+                    '.brick:', '.icode:', 'seg001:', '.Much:', 'iuagwws:']
         for prefix in segNames:
             if seg.startswith(prefix) is True:
                 return seg[len(prefix):]
