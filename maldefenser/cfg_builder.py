@@ -96,7 +96,7 @@ class ControlFlowGraphBuilder(object):
                 continue
 
             if len(decodedElems) > 0 and imcompleteByte.match(decodedElems[0]):
-                log.warning(f'Ignore imcomplete code at line {lineNum}: " ".join(decodedElems)')
+                log.warning(f'Ignore imcomplete code at line {lineNum}: {" ".join(decodedElems)}')
                 continue
 
             startIdx = self.indexOfInst(decodedElems)
@@ -106,7 +106,7 @@ class ControlFlowGraphBuilder(object):
                 log.debug(f"Processed line {lineNum}: '{' '.join(decodedElems)}' => '{' '.join(instElems)}'")
                 fileOutput.write(" ".join(instElems) + '\n')
             else:
-                log.warning(f'No instruction at line {lineNum}: {elems}')
+                log.warning(f'No instruction at line {lineNum}: {" ".join(decodedElems)}')
 
             lineNum += 1
 
