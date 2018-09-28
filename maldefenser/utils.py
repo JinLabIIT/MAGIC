@@ -12,7 +12,7 @@ def findAddrInOperators(operators: List[str]) -> int:
     for item in operators:
         for part in item.split('_'):
             if hexPattern.match(part) is not None:
-                log.info(f'"{part}" in {operators} is convertiable to hex int')
+                log.debug(f'"{part}" in {operators} is convertiable to hex int')
                 return int(part, 16)
             else:
                 log.debug(f'"{part}" is NOT convertiable to hex int')

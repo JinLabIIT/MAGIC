@@ -37,7 +37,7 @@ class ControlFlowGraphBuilder(object):
         self.addr2Inst: OrderedDict[int, isn.Instruction] = OrderedDict()
         self.addr2Block: Dict[int, Block] = {}
 
-    def build(self) -> None:
+    def buildControlFlowGraph(self) -> None:
         self.parseInstructions()
         self.parseBlocks()
 
@@ -55,7 +55,9 @@ class ControlFlowGraphBuilder(object):
         self.exportToNxGraph()
 
     def addrInCodeSegment(self, seg: str) -> str:
-        for prefix in ['.text:', 'CODE:']:
+        segNames = ['.text:', 'CODE:', 'UPX1:', 'seg000:',
+                    '.brick:', '.icode:', 'seg001:', '.Much:']
+        for prefix in segNames:
             if seg.startswith(prefix) is True:
                 return seg[len(prefix):]
 
@@ -192,6 +194,9 @@ class ControlFlowGraphBuilder(object):
                 self.aggregate(currAddr, sameAddrInsts)
                 sameAddrInsts.clear()
 
+            if len(self.program) == 0:
+                log.error(f'No code extracted from {self.filePrefix}.asm')
+
             self.saveProgram()
 
     def discoverInsts(self) -> None:
@@ -210,6 +215,7 @@ class ControlFlowGraphBuilder(object):
                     self.programStart = inst.address
                 self.programEnd = max(inst.address, self.programEnd)
                 prevAddr = inst.address
+
             # Last inst get default size 2
             self.addr2Inst[prevAddr].size = 2
 
@@ -357,8 +363,14 @@ class ControlFlowGraphBuilder(object):
 if __name__ == '__main__':
     log.setLevel("INFO")
     pathPrefix = '../DataSamples'
-    binaryIds = ['test', 'exGy3iaKJmRprdHcB0NO']
+    binaryIds = ['test',
+                 'exGy3iaKJmRprdHcB0NO',
+                 '0Q4ALVSRnlHUBjyOb1sw',
+                 'jERVLnaTwhHFrZbvNfCy',
+                 'LgeBlyYQAD1NiVGRuxwk',
+                 '0qjuDC7Rhx9rHkLlItAp',
+                 ]
     for bId in binaryIds:
         log.info('Processing ' + bId + '.asm')
         cfgBuilder = ControlFlowGraphBuilder(bId, pathPrefix)
-        cfgBuilder.build()
+        cfgBuilder.buildControlFlowGraph()
