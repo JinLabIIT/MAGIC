@@ -56,7 +56,9 @@ class ControlFlowGraphBuilder(object):
 
     def addrInCodeSegment(self, seg: str) -> str:
         segNames = ['.text:', 'CODE:', 'UPX1:', 'seg000:', 'qmoyiu:',
-                    '.brick:', '.icode:', 'seg001:', '.Much:', 'iuagwws:']
+                    '.UfPOkc:', '.brick:', '.icode:', 'seg001:',
+                    '.Much:', 'iuagwws:',
+                    ]
         for prefix in segNames:
             if seg.startswith(prefix) is True:
                 return seg[len(prefix):]
@@ -93,10 +95,12 @@ class ControlFlowGraphBuilder(object):
             if addr is "NotInCodeSeg":
                 # Since text segment maynot always be the head, we cannot break
                 log.debug("Line %d is out of text segment" % lineNum)
+                lineNum += 1
                 continue
 
             if len(decodedElems) > 0 and imcompleteByte.match(decodedElems[0]):
                 log.warning(f'Ignore imcomplete code at line {lineNum}: {" ".join(decodedElems)}')
+                lineNum += 1
                 continue
 
             startIdx = self.indexOfInst(decodedElems)

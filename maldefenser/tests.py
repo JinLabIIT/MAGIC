@@ -17,6 +17,7 @@ class TestCfgBuildedr(unittest.TestCase):
             '426c9FYfeVQbJnygpdKH',
             '5RwWjtmMKlLiXqer8fHG',
             'ELf4J1FhcetA82H0qvTu',
+            '5tMCNKDogQ2x7zwUbpcZ',
         ]
         for bId in binaryIds:
             log.info('Processing ' + bId + '.asm')
