@@ -1,4 +1,4 @@
-*.pkl
-*.7z
-*.pyc
-*.tgz
+*.prog
+*.text
+*.bytes
+*.pdf

@@ -63,14 +63,28 @@ class ControlFlowGraphBuilder(object):
 
         return "NotInCodeSeg"
 
+    def indexOfInst(self, decodedElems: List[str]) -> int:
+        idx = 0
+        bytePattern = re.compile(r'[A-F0-9][A-F0-9]')
+        while idx < len(decodedElems) and bytePattern.match(decodedElems[idx]):
+            idx += 1
+
+        return idx
+
+    def indexOfComment(self, decodedElems: List[str]) -> int:
+        for (i, elem) in enumerate(decodedElems):
+            if elem.find(';') != -1:
+                return i
+
+        return len(decodedElems)
+
     def extractTextSeg(self) -> None:
         """Extract text segment from .asm file"""
         log.info(f'**** Extract .text segment from {self.binaryId}.asm ****')
         lineNum = 1
-        bytePattern = re.compile(r'[A-F0-9][A-F0-9]')
         imcompleteByte = re.compile(r'\?\?')
         fileInput = open(self.filePrefix + '.asm', 'rb')
-        fileOutput = open(self.filePrefix + '.txt', 'w')
+        fileOutput = open(self.filePrefix + '.text', 'w')
         for line in fileInput:
             elems = line.split()
             decodedElems = [x.decode("utf-8", "ignore") for x in elems]
@@ -82,30 +96,17 @@ class ControlFlowGraphBuilder(object):
                 continue
 
             if len(decodedElems) > 0 and imcompleteByte.match(decodedElems[0]):
-                log.warning("Ignore imcomplete code at line %d: %s" %
-                            (lineNum, " ".join(decodedElems)))
+                log.warning(f'Ignore imcomplete code at line {lineNum}: " ".join(decodedElems)')
                 continue
 
-            startIdx = 0
-            while startIdx < len(decodedElems):
-                if bytePattern.match(decodedElems[startIdx]):
-                    startIdx += 1
-                else:
-                    break
-
-            if startIdx == len(decodedElems):
-                log.debug("No instructions at line %d: %s" % (lineNum, elems))
-                continue
-
-            if ';' in decodedElems:
-                endIdx = decodedElems.index(';')
-            else:
-                endIdx = len(decodedElems)
-
-            instElems = [addr] + decodedElems[startIdx: endIdx]
-            if len(instElems) > 1:
+            startIdx = self.indexOfInst(decodedElems)
+            endIdx = self.indexOfComment(decodedElems)
+            if startIdx < endIdx:
+                instElems = [addr] + decodedElems[startIdx: endIdx]
                 log.debug(f"Processed line {lineNum}: '{' '.join(decodedElems)}' => '{' '.join(instElems)}'")
                 fileOutput.write(" ".join(instElems) + '\n')
+            else:
+                log.warning(f'No instruction at line {lineNum}: {elems}')
 
             lineNum += 1
 
@@ -173,8 +174,8 @@ class ControlFlowGraphBuilder(object):
         log.info('**** Aggreate to unique-addressed instructions ****')
         currAddr = -1
         sameAddrInsts = []
-        with open(self.filePrefix + ".txt", 'r') as txtFile:
-            for line in txtFile:
+        with open(self.filePrefix + ".text", 'r') as textFile:
+            for line in textFile:
                 elems = line.rstrip('\n').split(' ')
                 addr, inst = elems[0], elems[1:]
                 if currAddr == -1:
@@ -356,7 +357,7 @@ class ControlFlowGraphBuilder(object):
 
     def clearTmpFiles(self) -> None:
         log.info('**** Remove temporary files ****')
-        for ext in ['.txt', '.prog']:
+        for ext in ['.text', '.prog']:
             os.remove(self.filePrefix + ext)
 
 
