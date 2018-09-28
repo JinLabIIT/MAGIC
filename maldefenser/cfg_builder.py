@@ -55,7 +55,7 @@ class ControlFlowGraphBuilder(object):
         self.exportToNxGraph()
 
     def addrInCodeSegment(self, seg: str) -> str:
-        segNames = ['.text:', 'CODE:', 'UPX1:', 'seg000:',
+        segNames = ['.text:', 'CODE:', 'UPX1:', 'seg000:', 'qmoyiu:',
                     '.brick:', '.icode:', 'seg001:', '.Much:', 'iuagwws:']
         for prefix in segNames:
             if seg.startswith(prefix) is True:
@@ -106,7 +106,7 @@ class ControlFlowGraphBuilder(object):
                 log.debug(f"Processed line {lineNum}: '{' '.join(decodedElems)}' => '{' '.join(instElems)}'")
                 fileOutput.write(" ".join(instElems) + '\n')
             else:
-                log.warning(f'No instruction at line {lineNum}: {" ".join(decodedElems)}')
+                log.debug(f'No instruction at line {lineNum}: {" ".join(decodedElems)}')
 
             lineNum += 1
 
@@ -135,6 +135,7 @@ class ControlFlowGraphBuilder(object):
 
         validInst = []
         foundDataDeclare = None
+        declarePattern = re.compile(r'.+=.+ ptr .+')
         for inst in sameAddrInsts:
             if inst.find('proc near') != -1 or inst.find('proc far') != -1:
                 continue
@@ -144,7 +145,8 @@ class ControlFlowGraphBuilder(object):
                 continue
             if inst.find('endp') != -1 or inst.find('ends') != -1:
                 continue
-            if inst.find(' = ') != -1:
+            if inst.find(' = ') != -1 or declarePattern.match(inst):
+                log.info(f'Ptr declare found: {inst}')
                 continue
             if inst.startswith('dw ') or inst.find(' dw ') != -1:
                 foundDataDeclare = inst

@@ -30,6 +30,8 @@
 .text:00401084		          								       ; __isindst_nolock+12
 .text:00401084
 .text:00401084	 arg_0	       = dword ptr  8
+.text:00401084   lpThreadParameter= dword ptr 10
+.text:00401084   ProcessInformation= _PROCESS_INFORMATION ptr -498h
 .text:00401084
 .text:00401084 8B FF	    mov     edi, edi
 .text:00401086 8B 45 08		mov     eax, [ebp+arg_0]
