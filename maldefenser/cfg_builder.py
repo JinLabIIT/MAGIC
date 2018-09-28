@@ -146,7 +146,7 @@ class ControlFlowGraphBuilder(object):
             if inst.find('endp') != -1 or inst.find('ends') != -1:
                 continue
             if inst.find(' = ') != -1 or declarePattern.match(inst):
-                log.info(f'Ptr declare found: {inst}')
+                log.debug(f'Ptr declare found: {inst}')
                 continue
             if inst.startswith('dw ') or inst.find(' dw ') != -1:
                 foundDataDeclare = inst
