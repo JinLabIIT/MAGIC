@@ -30,8 +30,8 @@ class DataProvider(object):
         df.to_csv('seen_inst.csv')
 
     def discoverInstDictionary(self, binaryIds: List[str]):
-        for bId in binaryIds:
-            log.info('Processing ' + bId + '.asm')
+        for (i, bId) in enumerate(binaryIds):
+            log.info(f'Processing {i}/{len(binaryIds)} {bId}.asm')
             cfgBuilder = cfg_builder.ControlFlowGraphBuilder(bId, self.pathPrefix)
             cfgBuilder.parseInstructions()
             log.debug(f'{len(cfgBuilder.instBuilder.seenInst)} unique insts in {bId}.asm')

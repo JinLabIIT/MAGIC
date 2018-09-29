@@ -57,13 +57,11 @@ class ControlFlowGraphBuilder(object):
     def addrInCodeSegment(self, seg: str) -> str:
         segNames = ['.text:', 'CODE:', 'UPX1:', 'seg000:', 'qmoyiu:',
                     '.UfPOkc:', '.brick:', '.icode:', 'seg001:',
-                    '.Much:', 'iuagwws:',
+                    '.Much:', 'iuagwws:', 'idata',
                     ]
         for prefix in segNames:
             if seg.startswith(prefix) is True:
                 return seg[len(prefix):]
-            elif seg.startswith('.idata:') and self.binaryId is '7vS8qWAMU6VzbglhF4r3':
-                return seg[len('.idata:'):]
 
         return "NotInCodeSeg"
 
