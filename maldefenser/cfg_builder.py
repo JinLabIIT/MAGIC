@@ -63,7 +63,7 @@ class ControlFlowGraphBuilder(object):
             if seg.startswith(prefix) is True:
                 return seg[len(prefix):]
             elif seg.startswith('.idata:') and self.binaryId is '7vS8qWAMU6VzbglhF4r3':
-                return seg[len(prefix):]
+                return seg[len('.idata:'):]
 
         return "NotInCodeSeg"
 
