@@ -5,7 +5,7 @@ import glog as log
 import networkx as nx
 import instructions as isn
 import matplotlib.pyplot as plt
-from utils import FakeCalleeAddr
+from utils import FakeCalleeAddr, addCodeSegLog
 from collections import OrderedDict
 from typing import List, Dict
 
@@ -46,7 +46,7 @@ class ControlFlowGraphBuilder(object):
         self.extractTextSeg()
         self.createProgram()
         self.discoverInsts()
-        self.clearTmpFiles()
+        # self.clearTmpFiles()
 
     def parseBlocks(self) -> None:
         """Second pass on blocks"""
@@ -57,7 +57,7 @@ class ControlFlowGraphBuilder(object):
     def addrInCodeSegment(self, seg: str) -> str:
         segNames = ['.text:', 'CODE:', 'UPX1:', 'seg000:', 'qmoyiu:',
                     '.UfPOkc:', '.brick:', '.icode:', 'seg001:',
-                    '.Much:', 'iuagwws:', 'idata',
+                    '.Much:', 'iuagwws:', '.idata:', '.IqR:'
                     ]
         for prefix in segNames:
             if seg.startswith(prefix) is True:
@@ -67,7 +67,7 @@ class ControlFlowGraphBuilder(object):
 
     def indexOfInst(self, decodedElems: List[str]) -> int:
         idx = 0
-        bytePattern = re.compile(r'[A-F0-9][A-F0-9]')
+        bytePattern = re.compile(r'^[A-F0-9][A-F0-9]$')
         while idx < len(decodedElems) and bytePattern.match(decodedElems[idx]):
             idx += 1
 
@@ -84,7 +84,7 @@ class ControlFlowGraphBuilder(object):
         """Extract text segment from .asm file"""
         log.info(f'**** Extract .text segment from {self.binaryId}.asm ****')
         lineNum = 1
-        imcompleteByte = re.compile(r'\?\?')
+        imcompleteByte = re.compile(r'^(\?\?|00\+)$')
         fileInput = open(self.filePrefix + '.asm', 'rb')
         fileOutput = open(self.filePrefix + '.text', 'w')
         for line in fileInput:
@@ -137,9 +137,9 @@ class ControlFlowGraphBuilder(object):
             self.program[addr] = sameAddrInsts[-1]
             return
 
-        validInst = []
-        foundDataDeclare = None
-        declarePattern = re.compile(r'.+=.+ ptr .+')
+        validInst: List[str] = []
+        foundDataDeclare: str = ''
+        ptrPattern = re.compile(r'.+=.+ ptr .+')
         for inst in sameAddrInsts:
             if inst.find('proc near') != -1 or inst.find('proc far') != -1:
                 continue
@@ -149,29 +149,32 @@ class ControlFlowGraphBuilder(object):
                 continue
             if inst.find('endp') != -1 or inst.find('ends') != -1:
                 continue
-            if inst.find(' = ') != -1 or declarePattern.match(inst):
+            if inst.find(' = ') != -1 or ptrPattern.match(inst):
                 log.debug(f'Ptr declare found: {inst}')
                 continue
             if inst.startswith('dw ') or inst.find(' dw ') != -1:
-                foundDataDeclare = inst
+                foundDataDeclare += inst + ' '
                 continue
             if inst.startswith('dd ') or inst.find(' dd ') != -1:
-                foundDataDeclare = inst
+                foundDataDeclare += inst + ' '
                 continue
             if inst.startswith('db ') or inst.find(' db ') != -1:
-                foundDataDeclare = inst
+                foundDataDeclare += inst + ' '
                 continue
             if inst.endswith(':'):
                 continue
             validInst.append(inst)
 
         if len(validInst) == 1:
-            self.program[addr] = validInst[0]
-        elif foundDataDeclare is not None:
-            self.program[addr] = foundDataDeclare
-            log.debug('Convert data declare into general format')
+            progLine = validInst[0] + ' ' + foundDataDeclare
+            self.program[addr] = progLine.rstrip(' ')
+        elif len(foundDataDeclare.rstrip(' ')) > 0:
+            self.program[addr] = foundDataDeclare.rstrip(' ')
+            log.debug('Convert all data declare into unified inst')
         else:
-            log.error(f'Unable to aggregate instructions for addr {addr}')
+            # Ignore insts not able to aggregate
+            # TODO: just concat validInst to form one inst
+            log.error(f'Unable to aggregate instructions at {addr}')
             for inst in validInst:
                 log.error('%s: %s' % (addr, inst))
 
@@ -224,7 +227,10 @@ class ControlFlowGraphBuilder(object):
                 prevAddr = inst.address
 
             # Last inst get default size 2
-            self.addr2Inst[prevAddr].size = 2
+            if prevAddr > 0:
+                self.addr2Inst[prevAddr].size = 2
+            else:
+                addCodeSegLog(self.binaryId)
 
         log.info(f'Program starts at {self.programStart:x} ends at {self.programEnd:x}')
 
@@ -234,7 +240,9 @@ class ControlFlowGraphBuilder(object):
             inst.accept(self)
 
     def enter(self, address: int) -> None:
-        if address < 0 or address >= self.programEnd:
+        if address == FakeCalleeAddr:
+            log.error(f'Enter fake callee addr {address}')
+        elif address < 0 or address >= self.programEnd:
             log.error(f'Unable to enter instruction at {address:x}')
         else:
             log.debug(f'Enter instruction at {address:x}')

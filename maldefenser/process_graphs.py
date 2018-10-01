@@ -4,7 +4,7 @@ import glog as log
 import glob
 import cfg_builder
 from typing import List
-
+from utils import delCodeSegLog
 
 class DataProvider(object):
     """Handle data location stuff"""
@@ -24,12 +24,12 @@ class DataProvider(object):
 
         return self.binaryIds
 
-    def exportSeenInst(self) -> None:
+    def exportSeenInst(self, exportTo: str) -> None:
         instColumn = {'Inst': sorted(list(self.seenInst))}
         df = pd.DataFrame(data=instColumn)
-        df.to_csv('seen_inst.csv')
+        df.to_csv('%s.csv' % exportTo)
 
-    def discoverInstDictionary(self, binaryIds: List[str]):
+    def discoverInstDictionary(self, binaryIds: List[str], exportTo: str):
         for (i, bId) in enumerate(binaryIds):
             log.info(f'Processing {i}/{len(binaryIds)} {bId}.asm')
             cfgBuilder = cfg_builder.ControlFlowGraphBuilder(bId, self.pathPrefix)
@@ -37,13 +37,14 @@ class DataProvider(object):
             log.debug(f'{len(cfgBuilder.instBuilder.seenInst)} unique insts in {bId}.asm')
             self.seenInst = self.seenInst.union(cfgBuilder.instBuilder.seenInst)
 
-        self.exportSeenInst()
+        self.exportSeenInst(exportTo)
 
 
 if __name__ == '__main__':
     log.setLevel("INFO")
     pathPrefix = '../TrainSet'
+    delCodeSegLog()
     dataProvider = DataProvider(pathPrefix)
     binaryIds = dataProvider.getBinaryIds()
     log.info(f'{binaryIds}')
-    dataProvider.discoverInstDictionary(binaryIds)
+    dataProvider.discoverInstDictionary(binaryIds, 'seen_inst')

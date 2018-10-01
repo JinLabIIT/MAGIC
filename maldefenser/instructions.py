@@ -1,4 +1,5 @@
 #!/usr/bin/python3.7
+import re
 import glog as log
 from typing import List
 from utils import findAddrInOperators, FakeCalleeAddr, AddrNotFound
@@ -307,6 +308,13 @@ class XorInst(Instruction):
         self.operators: List[str] = operators
 
 
+class DataInst(Instruction):
+
+    def __init__(self, addr: str, operators: List[str]) -> None:
+        super(DataInst, self).__init__(addr)
+        self.operators: List[str] = operators
+
+
 class InstBuilder(object):
     """Create instructions based on string content"""
 
@@ -323,6 +331,11 @@ class InstBuilder(object):
         operand = elems[1]
         operators = elems[2:] if len(elems[2:]) > 0 else []
         operators = [op.rstrip(',') for op in operators]
+
+        # Handle data declaration seperately
+        instPattern = re.compile('^[a-z]+$')
+        if instPattern.match(operand) is None:
+            return DataInst(address, [operand] + operators)
 
         self.seenInst.add(operand)
         if operand == 'add':
