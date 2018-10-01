@@ -16,7 +16,9 @@ ConditionalJumpInstList = ['ja', 'jb', 'jbe', 'jcxz', 'jecxz', 'jg', 'jge',
 UnconditionalJumpInstList = ['jmp']
 EndHereInstList = ['end',
                    'iret', 'iretw',
-                   'reti', 'retn']
+                   'retf', 'reti', 'retfw', 'retn', 'retnw',
+                   ]
+RepeatInstList = ['rep', 'repe', 'repne']
 RegularInstList = ['aaa', 'aad', 'aam', 'aas', 'adc', 'add', 'addpd', 'addps',
                    'addsd', 'addss', 'addsubpd', 'addsubps', 'align', 'and',
                    'andnpd', 'andnps', 'andpd', 'andps', 'arpl',
@@ -88,9 +90,9 @@ RegularInstList = ['aaa', 'aad', 'aam', 'aas', 'adc', 'add', 'addpd', 'addps',
                    'ptest', 'punpckhbw', 'punpckhdq', 'punpckhqdq', 'punpckhwd', 'punpcklbw', 'punpckldq', 'punpcklqdq', 'punpcklwd',
                    'push', 'pusha', 'pushaw', 'pushf', 'pushfw', 'pxor',
                    'rc', 'rcl', 'rcpps', 'rcpss', 'rcr', 'rdmsr', 'rdpmc',
-                   'rdrand', 'rdtsc',
+                   'rdrand', 'rdtsc', 'rol', 'ror', 'roundps', 'rsldt',
+                   'rsm', 'rsqrtps', 'rsqrtss', 'rsts',
                    ]
-
 
 class Instruction(object):
     """Abstract assembly instruction, used as default for unknown ones"""
@@ -186,6 +188,21 @@ class UnconditionalJumpInst(Instruction):
         return findAddrInOperators(self.operators)
 
 
+class RepeatInst(Instruction):
+    """Repeat just the instruction: conditional jump to itself"""
+
+    def __init__(self, addr: str, operand: str, operators: List[str]) -> None:
+        super(RepInst, self).__init__(addr)
+        self.operand = operand
+        self.operators: List[str] = operators
+
+    def accept(self, builder):
+        builder.visitConditionalJump(self)
+
+    def findAddrInInst(self):
+        return int(self.address, 16)
+
+
 class EndHereInst(Instruction):
     """EndHere"""
 
@@ -229,6 +246,8 @@ class InstBuilder(object):
             return UnconditionalJumpInst(address, operand, operators)
         elif operand in EndHereInstList:
             return EndHereInst(address, operand, operators)
+        elif operand in RepeatInstList:
+            return RepeatInst(address, operand, operators)
         elif operand in RegularInstList:
             return RegularInst(address, operand, operators)
         else:
