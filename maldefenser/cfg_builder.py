@@ -67,7 +67,7 @@ class ControlFlowGraphBuilder(object):
 
     def indexOfInst(self, decodedElems: List[str]) -> int:
         idx = 0
-        bytePattern = re.compile(r'^[A-F0-9][A-F0-9]$')
+        bytePattern = re.compile(r'^[A-F0-9][A-F0-9]\+?$')
         while idx < len(decodedElems) and bytePattern.match(decodedElems[idx]):
             idx += 1
 
@@ -84,7 +84,7 @@ class ControlFlowGraphBuilder(object):
         """Extract text segment from .asm file"""
         log.info(f'**** Extract .text segment from {self.binaryId}.asm ****')
         lineNum = 1
-        imcompleteByte = re.compile(r'^(\?\?|00\+)$')
+        imcompleteByte = re.compile(r'^\?\?$')
         fileInput = open(self.filePrefix + '.asm', 'rb')
         fileOutput = open(self.filePrefix + '.text', 'w')
         for line in fileInput:
@@ -172,11 +172,15 @@ class ControlFlowGraphBuilder(object):
             self.program[addr] = foundDataDeclare.rstrip(' ')
             log.debug('Convert all data declare into unified inst')
         else:
-            # Ignore insts not able to aggregate
-            # TODO: just concat validInst to form one inst
-            log.error(f'Unable to aggregate instructions at {addr}')
+            # Concat unaggregatable insts
+            log.warning(f'Unable to aggregate instructions at {addr}')
+            progLine = ''
             for inst in validInst:
+                progLine += inst.rstrip('\n\\') + ' '
                 log.error('%s: %s' % (addr, inst))
+
+            log.warning(f'Concat to: {progLine}')
+            self.program[addr] = progLine.rstrip(' ')
 
     def createProgram(self) -> None:
         """Generate unique-addressed program, store in self.program"""
