@@ -309,10 +309,86 @@ class XorInst(Instruction):
 
 
 class DataInst(Instruction):
+    """Variable/data declaration statements don't have operand"""
 
     def __init__(self, addr: str, operators: List[str]) -> None:
         super(DataInst, self).__init__(addr)
         self.operators: List[str] = operators
+
+    def accept(self, builder):
+        builder.visitDefault(self)
+
+class RegularInst(Instruction):
+    """Regular instruction"""
+
+    def __init__(self, addr: str, operand: str, operators: List[str]) -> None:
+        super(RegularInst, self).__init__(addr)
+        self.operand = operand
+        self.operators: List[str] = operators
+
+    def accept(self, builder):
+        builder.visitDefault(self)
+
+
+class CallingInst(Instruction):
+    """Calling"""
+
+    def __init__(self, addr: str, operand: str, operators: List[str]) -> None:
+        super(CallingInst, self).__init__(addr)
+        self.operand = operand
+        self.operators: List[str] = operators
+
+    def accept(self, builder):
+        builder.visitCalling(self)
+
+    def findAddrInInst(self):
+        addr = findAddrInOperators(self.operators)
+        if addr < 0:
+            return FakeCalleeAddr
+        else:
+            return addr
+
+
+class ConditionalJumpInst(Instruction):
+    """ConditionalJump"""
+
+    def __init__(self, addr: str, operand: str, operators: List[str]) -> None:
+        super(ConditionalJumpInst, self).__init__(addr)
+        self.operand = operand
+        self.operators: List[str] = operators
+
+    def accept(self, builder):
+        builder.visitConditionalJump(self)
+
+    def findAddrInInst(self):
+        return findAddrInOperators(self.operators)
+
+
+class UnconditionalJumpInst(Instruction):
+    """UnconditionalJump"""
+
+    def __init__(self, addr: str, operand: str, operators: List[str]) -> None:
+        super(UnconditionalJumpInst, self).__init__(addr)
+        self.operand = operand
+        self.operators: List[str] = operators
+
+    def accept(self, builder):
+        builder.visitUnconditionalJump(self)
+
+    def findAddrInInst(self):
+        return findAddrInOperators(self.operators)
+
+
+class EndHereInst(Instruction):
+    """EndHere"""
+
+    def __init__(self, addr: str, operand: str, operators: List[str]) -> None:
+        super(EndHereInst, self).__init__(addr)
+        self.operand = operand
+        self.operators: List[str] = operators
+
+    def accept(self, builder):
+        builder.visitEndHere(self)
 
 
 class InstBuilder(object):
@@ -337,30 +413,23 @@ class InstBuilder(object):
         if instPattern.match(operand) is None:
             return DataInst(address, [operand] + operators)
 
+        CallingInstList = ['call']
+        ConditionalJumpInstList = ['jnz', 'jz']
+        UnconditionalJumpInstList = ['jmp']
+        EndHereInstList = ['reti', 'retn']
+        RegularInstList = ['add', 'align', 'and', 'cdq', 'dec',
+                           'div', 'fdivrp', 'lea', 'mov', 'push',
+                           'pop', 'sub', 'xor', ]
         self.seenInst.add(operand)
-        if operand == 'add':
-            return AddInst(address, operators)
-        elif operand == 'call':
-            return CallInst(address, operators)
-        elif operand == 'jmp':
-            return JmpInst(address, operators)
-        elif operand == 'jnz':
-            return JnzInst(address, operators)
-        elif operand == 'lea':
-            return LeaInst(address, operators)
-        elif operand == 'mov':
-            return MovInst(address, operators)
-        elif operand == 'push':
-            return PushInst(address, operators)
-        elif operand == 'pop':
-            return PopInst(address, operators)
-        elif operand == 'reti':
-            return RetiInst(address, operators)
-        elif operand == 'retn':
-            return RetnInst(address, operators)
-        elif operand == 'sub':
-            return SubInst(address, operators)
-        elif operand == 'xor':
-            return XorInst(address, operators)
+        if operand in CallingInstList:
+            return CallingInst(address, operand, operators)
+        elif operand in ConditionalJumpInstList:
+            return ConditionalJumpInst(address, operand, operators)
+        elif operand in UnconditionalJumpInstList:
+            return UnconditionalJumpInst(address, operand, operators)
+        elif operand in EndHereInstList:
+            return EndHereInst(address, operand, operators)
+        elif operand in RegularInstList:
+            return RegularInst(address, operand, operators)
         else:
             return Instruction(address)

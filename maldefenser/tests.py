@@ -6,6 +6,7 @@ from utils import delCodeSegLog
 
 
 class TestCfgBuildedr(unittest.TestCase):
+    # @unittest.skip("Uncomment to run")
     def test_parseInstructions(self):
         pathPrefix = '../TrainSet'
         binaryIds = [
@@ -38,6 +39,7 @@ class TestCfgBuildedr(unittest.TestCase):
             cfgBuilder = ControlFlowGraphBuilder(bId, pathPrefix)
             cfgBuilder.buildControlFlowGraph()
 
+    # @unittest.skip("Uncomment to run")
     def test_emptyCodeSeg(self):
         pathPrefix = '../TrainSet'
         binaryIds = [
@@ -50,6 +52,7 @@ class TestCfgBuildedr(unittest.TestCase):
             cfgBuilder = ControlFlowGraphBuilder(bId, pathPrefix)
             cfgBuilder.parseInstructions()
 
+    # @unittest.skip("Uncomment to run")
     def test_discoverInstDict(self):
         pathPrefix = '../TrainSet'
         binaryIds = [

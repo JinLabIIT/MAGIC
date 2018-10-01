@@ -99,7 +99,7 @@ class ControlFlowGraphBuilder(object):
                 continue
 
             if len(decodedElems) > 0 and imcompleteByte.match(decodedElems[0]):
-                log.warning(f'Ignore imcomplete code at line {lineNum}: {" ".join(decodedElems)}')
+                log.debug(f'Ignore imcomplete code at line {lineNum}: {" ".join(decodedElems)}')
                 lineNum += 1
                 continue
 
@@ -119,7 +119,7 @@ class ControlFlowGraphBuilder(object):
 
     def isHeaderInfo(self, sameAddrInsts: List[str]) -> bool:
         for inst in sameAddrInsts:
-            if inst.startswith('_text segment'):
+            if inst.startswith('_text segment') or inst.find('.mmx') != -1:
                 return True
 
         return False
@@ -241,7 +241,7 @@ class ControlFlowGraphBuilder(object):
 
     def enter(self, address: int) -> None:
         if address == FakeCalleeAddr:
-            log.error(f'Enter fake callee addr {address}')
+            log.debug(f'Enter fake callee addr {address}')
         elif address < 0 or address >= self.programEnd:
             log.error(f'Unable to enter instruction at {address:x}')
         else:
@@ -249,6 +249,7 @@ class ControlFlowGraphBuilder(object):
             self.addr2Inst[address].start = True
 
     def branch(self, inst) -> None:
+        """Conditional jump to another address or fall throught"""
         branchToAddr = inst.findAddrInInst()
         self.addr2Inst[inst.address].branchTo = branchToAddr
         log.debug(f'Found branch from {inst.address:x} to {branchToAddr:x}')
@@ -256,8 +257,9 @@ class ControlFlowGraphBuilder(object):
         self.enter(inst.address + inst.size)
 
     def call(self, inst) -> None:
+        """Jump out and then back"""
         self.addr2Inst[inst.address].call = True
-        # Likely NOT able to find callee's address
+        # Likely NOT able to find callee's address (e.g. extern symbols)
         callAddr = inst.findAddrInInst()
         if callAddr != FakeCalleeAddr:
             log.debug(f'Found call from {inst.address:x} to {callAddr:x}')
@@ -269,6 +271,7 @@ class ControlFlowGraphBuilder(object):
         self.enter(inst.address + inst.size)
 
     def jump(self, inst) -> None:
+        """Unconditional jump to another address"""
         jumpAddr = inst.findAddrInInst()
         self.addr2Inst[inst.address].fallThrough = False
         self.addr2Inst[inst.address].branchTo = jumpAddr
@@ -277,6 +280,7 @@ class ControlFlowGraphBuilder(object):
         self.enter(inst.address + inst.size)
 
     def end(self, inst) -> None:
+        """Stop fall throught"""
         self.addr2Inst[inst.address].fallThrough = False
         log.debug(f'Found end at {inst.address:x}')
         self.enter(inst.address + inst.size)
@@ -284,19 +288,16 @@ class ControlFlowGraphBuilder(object):
     def visitDefault(self, inst) -> None:
         pass
 
-    def visitCall(self, inst) -> None:
+    def visitCalling(self, inst) -> None:
         self.call(inst)
 
-    def visitJmp(self, inst) -> None:
-        self.jump(inst)
-
-    def visitJnz(self, inst) -> None:
+    def visitConditionalJump(self, inst) -> None:
         self.branch(inst)
 
-    def visitReti(self, inst) -> None:
-        self.end(inst)
+    def visitUnconditionalJump(self, inst) -> None:
+        self.jump(inst)
 
-    def visitRetn(self, inst) -> None:
+    def visitEndHere(self, inst) -> None:
         self.end(inst)
 
     def getBlockAtAddr(self, addr: int) -> Block:
