@@ -57,7 +57,7 @@ class ControlFlowGraphBuilder(object):
     def addrInCodeSegment(self, seg: str) -> str:
         segNames = ['.text:', 'CODE:', 'UPX1:', 'seg000:', 'qmoyiu:',
                     '.UfPOkc:', '.brick:', '.icode:', 'seg001:',
-                    '.Much:', 'iuagwws:', '.idata:', '.IqR:'
+                    '.Much:', 'iuagwws:', '.idata:', '.IqR:', '.data:',
                     ]
         for prefix in segNames:
             if seg.startswith(prefix) is True:
@@ -82,7 +82,7 @@ class ControlFlowGraphBuilder(object):
 
     def extractTextSeg(self) -> None:
         """Extract text segment from .asm file"""
-        log.info(f'**** Extract .text segment from {self.binaryId}.asm ****')
+        log.info(f'**** Extract code segment from {self.binaryId}.asm ****')
         lineNum = 1
         imcompleteByte = re.compile(r'^\?\?$')
         fileInput = open(self.filePrefix + '.asm', 'rb')
@@ -243,22 +243,26 @@ class ControlFlowGraphBuilder(object):
         for addr, inst in self.addr2Inst.items():
             inst.accept(self)
 
-    def enter(self, address: int) -> None:
-        if address == FakeCalleeAddr:
-            log.debug(f'Enter fake callee addr {address}')
-        elif address < 0 or address >= self.programEnd:
-            log.error(f'Unable to enter instruction at {address:x}')
+    def enter(self, inst, enterAddr: int) -> None:
+        if enterAddr == FakeCalleeAddr:
+            """Unknown extern code object"""
+            log.debug(f'Enter fake callee addr {inst.address}')
+        elif enterAddr >= 0 and enterAddr < 256:
+            """Software interrup"""
+            log.debug(f'Enter software interrupt {enterAddr:x}')
+        elif enterAddr < self.programStart or enterAddr > self.programEnd:
+            log.error(f'Unable to enter {enterAddr:x} from {inst}')
         else:
-            log.debug(f'Enter instruction at {address:x}')
-            self.addr2Inst[address].start = True
+            log.debug(f'Enter instruction at {enterAddr:x} from {inst}')
+            self.addr2Inst[enterAddr].start = True
 
     def branch(self, inst) -> None:
         """Conditional jump to another address or fall throught"""
         branchToAddr = inst.findAddrInInst()
         self.addr2Inst[inst.address].branchTo = branchToAddr
         log.debug(f'Found branch from {inst.address:x} to {branchToAddr:x}')
-        self.enter(branchToAddr)
-        self.enter(inst.address + inst.size)
+        self.enter(inst, branchToAddr)
+        self.enter(inst, inst.address + inst.size)
 
     def call(self, inst) -> None:
         """Jump out and then back"""
@@ -271,8 +275,8 @@ class ControlFlowGraphBuilder(object):
             log.debug(f'Fake call from {inst.address:x} to FakeCalleeAddr')
 
         self.addr2Inst[inst.address].branchTo = callAddr
-        self.enter(callAddr)
-        self.enter(inst.address + inst.size)
+        self.enter(inst, callAddr)
+        self.enter(inst, inst.address + inst.size)
 
     def jump(self, inst) -> None:
         """Unconditional jump to another address"""
@@ -280,14 +284,14 @@ class ControlFlowGraphBuilder(object):
         self.addr2Inst[inst.address].fallThrough = False
         self.addr2Inst[inst.address].branchTo = jumpAddr
         log.debug(f'Found jump from {inst.address:x} to {jumpAddr:x}')
-        self.enter(jumpAddr)
-        self.enter(inst.address + inst.size)
+        self.enter(inst, jumpAddr)
+        self.enter(inst, inst.address + inst.size)
 
     def end(self, inst) -> None:
         """Stop fall throught"""
         self.addr2Inst[inst.address].fallThrough = False
         log.debug(f'Found end at {inst.address:x}')
-        self.enter(inst.address + inst.size)
+        self.enter(inst, inst.address + inst.size)
 
     def visitDefault(self, inst) -> None:
         pass
@@ -309,7 +313,7 @@ class ControlFlowGraphBuilder(object):
             block = Block()
             block.startAddr = addr
             self.addr2Block[addr] = block
-            log.info(f'Create new block starting at {addr:x}')
+            log.debug(f'Create new block starting at {addr:x}')
 
         return self.addr2Block[addr]
 
@@ -327,12 +331,12 @@ class ControlFlowGraphBuilder(object):
                 if inst.fallThrough is True and nextInst.start is True:
                     nextBlock = self.getBlockAtAddr(nextAddr)
                     currBlock.edgeList.append(nextBlock.startAddr)
-                    log.info(f'block {currBlock.startAddr:x} => next {nextBlock.startAddr:x}')
+                    log.debug(f'block {currBlock.startAddr:x} => next {nextBlock.startAddr:x}')
 
             if inst.branchTo > 0 or inst.branchTo == FakeCalleeAddr:
                 block = self.getBlockAtAddr(inst.branchTo)
                 currBlock.edgeList.append(block.startAddr)
-                log.info(f'block {currBlock.startAddr:x} => branch {block.startAddr:x}')
+                log.debug(f'block {currBlock.startAddr:x} => branch {block.startAddr:x}')
 
             currBlock.instList.append(inst)
             currBlock.endAddr = max(currBlock.endAddr, inst.address)
@@ -349,10 +353,9 @@ class ControlFlowGraphBuilder(object):
             for neighboor in block.edgeList:
                 self.cfg.add_edge('%8X' % addr, '%8X' % neighboor)
 
-        self.printCfg()
 
     def drawCfg(self) -> None:
-        log.info(f'**** Save graph plot to {self.binaryId}.pdf ****')
+        log.info(f'**** Save graph plot to {self.filePrefix}.pdf ****')
         nx.draw(self.cfg, with_labels=True, font_weight='normal')
         plt.savefig('%s.pdf' % self.filePrefix, format='pdf')
         plt.clf()

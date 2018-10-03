@@ -4,21 +4,32 @@ import glog as log
 from typing import List
 from utils import findAddrInOperators, FakeCalleeAddr, AddrNotFound
 
+
 DataInstList = ['dd', 'db', 'dw', 'dq',
-                'extrn']
+                'extrn',
+                'unicode',]
+DataInstDict = {k: v for v, k in enumerate(DataInstList)}
 CallingInstList = ['call',
-                   'int', 'into']
+                   'int', 'into',
+                   'syscall', 'sysenter',]
+CallingInstDict = {k: v for v, k in enumerate(CallingInstList)}
 ConditionalJumpInstList = ['ja', 'jb', 'jbe', 'jcxz', 'jecxz', 'jg', 'jge',
                            'jl', 'jle', 'jnb', 'jno', 'jnp', 'jns', 'jnz',
                            'jo', 'jp', 'js', 'jz',
                            'loop', 'loope', 'loopne', 'loopw',
                            'loopwe', 'loopwne',]
+ConditionalJumpInstDict = {k: v for v, k in enumerate(ConditionalJumpInstList)}
 UnconditionalJumpInstList = ['jmp']
+UnconditionalJumpInstDict = {k: v for v, k in enumerate(UnconditionalJumpInstList)}
 EndHereInstList = ['end',
                    'iret', 'iretw',
                    'retf', 'reti', 'retfw', 'retn', 'retnw',
+                   'sysexit', 'sysret',
+                   'xabort',
                    ]
+EndHereInstDict = {k: v for v, k in enumerate(EndHereInstList)}
 RepeatInstList = ['rep', 'repe', 'repne']
+RepeatInstDict = {k: v for v, k in enumerate(RepeatInstList)}
 RegularInstList = ['aaa', 'aad', 'aam', 'aas', 'adc', 'add', 'addpd', 'addps',
                    'addsd', 'addss', 'addsubpd', 'addsubps', 'align', 'and',
                    'andnpd', 'andnps', 'andpd', 'andps', 'arpl',
@@ -92,7 +103,47 @@ RegularInstList = ['aaa', 'aad', 'aam', 'aas', 'adc', 'add', 'addpd', 'addps',
                    'rc', 'rcl', 'rcpps', 'rcpss', 'rcr', 'rdmsr', 'rdpmc',
                    'rdrand', 'rdtsc', 'rol', 'ror', 'roundps', 'rsldt',
                    'rsm', 'rsqrtps', 'rsqrtss', 'rsts',
-                   ]
+                   'sahf', 'sal', 'sar', 'sbb', 'scas', 'scasb', 'scasd',
+                   'scasw', 'setalc', 'setb', 'setbe', 'setl', 'setle',
+                   'setnb', 'setnbe', 'setnl', 'setnle', 'setno', 'setnp',
+                   'setns', 'setnz', 'seto', 'setp', 'sets', 'setz',
+                   'sfence', 'sgdt', 'shl', 'shld', 'shr', 'shrd', 'shufpd',
+                   'shufps', 'sidt', 'sldt', 'sqrtps', 'sqrtsd', 'sqrtss',
+                   'stc', 'std', 'sti', 'stmxcsr', 'stos', 'stosb', 'stosd',
+                   'stosw', 'str', 'sub', 'subpd', 'subps', 'subsd',
+                   'subss', 'svldt', 'svts',
+                   'test',
+                   'ucomisd','ucomiss', 'unpckhpd', 'unpckhps',
+                   'unpcklpd', 'unpcklps',
+                   'vaddps', 'vaddsd', 'vaddss', 'vaddsubpd', 'vandnpd',
+                   'vcmppd', 'vcmpps', 'vcmpss', 'vcomisd', 'vdivpd',
+                   'vdivps', 'vdivsd', 'vdivss', 'verw', 'vhsubpd',
+                   'vhsubps', 'vmaxpd', 'vmaxsd', 'vmaxss', 'vminsd',
+                   'vminss', 'vmload', 'vmovapd', 'vmovaps', 'vmovd',
+                   'vmovddup', 'vmovdqa', 'vmovdqu', 'vmovhps', 'vmovlhps',
+                   'vmovntdq', 'vmovntpd', 'vmovntps', 'vmovntsd',
+                   'vmovsd', 'vmovsldup', 'vmovss', 'vmovupd', 'vmovups',
+                   'vmptrld', 'vmptrst', 'vmread', 'vmulps', 'vmulss',
+                   'vmwrite', 'vorpd','vpackssdw', 'vpacksswb', 'vpackuswb',
+                   'vpaddb', 'vpaddd', 'vpaddq', 'vpaddsb', 'vpaddsw',
+                   'vpaddusb', 'vpaddusw', 'vpaddw', 'vpandn', 'vpcext',
+                   'vpclmulqdq', 'vpcmpeqb', 'vpcmpeqd', 'vpcmpeqw', 'vpcmpgtb',
+                   'vpcmpgtd', 'vpcmpgtw', 'vpermilps', 'vpermq',
+                   'vpextrw', 'vpinsrw', 'vpmaddwd', 'vpmaxub', 'vpmulhuw',
+                   'vpmulhw', 'vpmullw', 'vpsadbw', 'vpshufhw', 'vpshuflw',
+                   'vpsllq', 'vpsllw', 'vpsrad', 'vpsrld', 'vpsrlq',
+                   'vpsrlw', 'vpsubb', 'vpsubd', 'vpsubusb', 'vpunpckhbw',
+                   'vpunpckhdq', 'vpunpckhqdq', 'vpunpckhwd', 'vpunpcklbw',
+                   'vpunpckldq', 'vpunpcklqdq', 'vpunpcklwd', 'vpxor',
+                   'vrcpss', 'vrsqrtss', 'vshufpd', 'vshufps', 'vsqrtpd',
+                   'vsqrtps', 'vsqrtsd', 'vsubpd', 'vsubps', 'vsubsd',
+                   'vucomiss', 'vunpckhps', 'vunpcklpd', 'vunpcklps',
+                   'vxorps', 'vzeroupper',
+                   'wait', 'wbinvd', 'wrmsr',
+                   'xadd', 'xbegin', 'xchg', 'xlat', 'xor',
+                   'xorpd', 'xorps', 'xrstor', 'xsaveopt']
+RegularInstDict = {k: v for v, k in enumerate(RegularInstList)}
+
 
 class Instruction(object):
     """Abstract assembly instruction, used as default for unknown ones"""
@@ -110,10 +161,15 @@ class Instruction(object):
         self.ret: bool = False
 
     def accept(self, builder):
+        """Tell builder how to visit the instruction"""
         builder.visitDefault(self)
 
     def findAddrInInst(self) -> int:
+        """Jumping instructions should override to provide jump address"""
         return None
+
+    def __repr__(self) -> str:
+        return "%X: %s" % (self.address, self.operand)
 
 
 class DataInst(Instruction):
@@ -126,6 +182,9 @@ class DataInst(Instruction):
     def accept(self, builder):
         builder.visitDefault(self)
 
+    def __repr__(self) -> str:
+        return "%X: %s %s" % (self.address, self.operand, self.operators)
+
 
 class RegularInst(Instruction):
     """Regular instruction"""
@@ -137,6 +196,9 @@ class RegularInst(Instruction):
 
     def accept(self, builder):
         builder.visitDefault(self)
+
+    def __repr__(self) -> str:
+        return "%X: %s %s" % (self.address, self.operand, self.operators)
 
 
 class CallingInst(Instruction):
@@ -157,6 +219,9 @@ class CallingInst(Instruction):
         else:
             return addr
 
+    def __repr__(self) -> str:
+        return "%X: %s %s" % (self.address, self.operand, self.operators)
+
 
 class ConditionalJumpInst(Instruction):
     """ConditionalJump"""
@@ -171,6 +236,9 @@ class ConditionalJumpInst(Instruction):
 
     def findAddrInInst(self):
         return findAddrInOperators(self.operators)
+
+    def __repr__(self) -> str:
+        return "%X: %s %s" % (self.address, self.operand, self.operators)
 
 
 class UnconditionalJumpInst(Instruction):
@@ -187,12 +255,15 @@ class UnconditionalJumpInst(Instruction):
     def findAddrInInst(self):
         return findAddrInOperators(self.operators)
 
+    def __repr__(self) -> str:
+        return "%X: %s %s" % (self.address, self.operand, self.operators)
+
 
 class RepeatInst(Instruction):
     """Repeat just the instruction: conditional jump to itself"""
 
     def __init__(self, addr: str, operand: str, operators: List[str]) -> None:
-        super(RepInst, self).__init__(addr)
+        super(RepeatInst, self).__init__(addr)
         self.operand = operand
         self.operators: List[str] = operators
 
@@ -200,7 +271,10 @@ class RepeatInst(Instruction):
         builder.visitConditionalJump(self)
 
     def findAddrInInst(self):
-        return int(self.address, 16)
+        return self.address
+
+    def __repr__(self) -> str:
+        return "%X: %s %s" % (self.address, self.operand, self.operators)
 
 
 class EndHereInst(Instruction):
@@ -213,6 +287,9 @@ class EndHereInst(Instruction):
 
     def accept(self, builder):
         builder.visitEndHere(self)
+
+    def __repr__(self) -> str:
+        return "%X: %s %s" % (self.address, self.operand, self.operators)
 
 
 class InstBuilder(object):
@@ -238,17 +315,17 @@ class InstBuilder(object):
             return DataInst(address, [operand] + operators)
 
         self.seenInst.add(operand)
-        if operand in CallingInstList:
+        if operand in CallingInstDict:
             return CallingInst(address, operand, operators)
-        elif operand in ConditionalJumpInstList:
+        elif operand in ConditionalJumpInstDict:
             return ConditionalJumpInst(address, operand, operators)
-        elif operand in UnconditionalJumpInstList:
+        elif operand in UnconditionalJumpInstDict:
             return UnconditionalJumpInst(address, operand, operators)
-        elif operand in EndHereInstList:
+        elif operand in EndHereInstDict:
             return EndHereInst(address, operand, operators)
-        elif operand in RepeatInstList:
+        elif operand in RepeatInstDict:
             return RepeatInst(address, operand, operators)
-        elif operand in RegularInstList:
+        elif operand in RegularInstDict:
             return RegularInst(address, operand, operators)
         else:
             return Instruction(address)
