@@ -347,12 +347,11 @@ class ControlFlowGraphBuilder(object):
         """Assume block/node is represented by its startAddr"""
         log.info('**** Export to networkx-compatible graph ****')
         for (addr, block) in self.addr2Block.items():
-            self.cfg.add_node('%8X' % addr, block=block)
+            self.cfg.add_node('%08X' % addr, block=block)
 
         for (addr, block) in self.addr2Block.items():
             for neighboor in block.edgeList:
-                self.cfg.add_edge('%8X' % addr, '%8X' % neighboor)
-
+                self.cfg.add_edge('%08X' % addr, '%08X' % neighboor)
 
     def drawCfg(self) -> None:
         log.info(f'**** Save graph plot to {self.filePrefix}.pdf ****')
@@ -366,6 +365,8 @@ class ControlFlowGraphBuilder(object):
         log.info(f'#edges in cfg: {nx.number_of_edges(self.cfg)}')
         for (addr, block) in sorted(self.addr2Block.items()):
             log.info(f'block {addr:x} [{block.startAddr:x}, {block.endAddr:x}]')
+
+        for (addr, block) in sorted(self.addr2Block.items()):
             for neighboor in block.edgeList:
                 log.info(f'block {addr:x} -> {neighboor:x}')
 
