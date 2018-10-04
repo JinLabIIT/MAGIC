@@ -37,39 +37,51 @@ class TestCfgBuildedr(unittest.TestCase):
         cfgBuilder = ControlFlowGraphBuilder(bId, pathPrefix)
         cfgBuilder.buildControlFlowGraph()
         cfgBuilder.printCfg()
-
-        expectedBlocks = ['-2', '401048', '401050', '401052',
-                          '401054', '401064', '40106c', '40106d',
-                          '401076', '401079', '40107e', '401080',
-                          '401084', '401090', '401092', '40109a',
-                          '4010a3', '4010a9', '4010ac',
+        expectedBlocks = ['-2', '-1', 'ff',
+                          '401048', '401050', '401052', '401054',
+                          '401064', '40106a', '40106c',
+                          '40106d', '401076', '401079', '40107e',
+                          '401080', '401084', '401090', '401092',
+                          '40109a', '4010a3', '4010a9', '4010ac',
+                          '4010ae', '4010b3', '4010b5', '4010b7',
+                          '4010b9',
                           ]
         expectedBlocks = ["%08X" % int(x, 16) for x in expectedBlocks]
         expectedEdges = [('401048', '401050'), ('401048', '401048'),
-                         ('401050', '401054'), ('401054', '401064'),
-                         ('401064', '40106c'), ('401064', '401084'),
+                         ('401050', '401054'),
+                         ('401054', '401064'),
+                         ('401064', '40106a'), ('401064', '4010ae'),
+                         ('40106a', '401084'), ('40106a', '40106c'),
                          ('40106c', '40106d'), ('40106c', '401064'),
                          ('40106d', '401076'), ('40106d', '401054'),
-                         ('401076', '401079'), ('401079', '40107e'),
-                         ('401079', '-2'), ('40107e', '401080'),
-                         ('40107e', '401079'), ('401084', '401090'),
-                         ('401084', '4010a3'), ('401090', '401092'),
-                         ('401090', '-2'), ('401092', '40109a'),
-                         ('401092', '-2'), ('40109a', '4010a9'),
+                         ('401076', '401079'),
+                         ('401079', '40107e'), ('401079', '-2'),
+                         ('40107e', '401080'), ('40107e', '401079'),
+                         ('401084', '401090'), ('401084', '4010a3'),
+                         ('401090', '401092'), ('401090', '-2'),
+                         ('401092', '40109a'), ('401092', '-2'),
+                         ('40109a', '4010a9'),
                          ('4010a3', '4010a9'),
+                         ('4010ac', '4010ae'),
+                         ('4010ae', '-2'),
+                         ('4010b3', '4010b5'), ('4010b3', '401084'),
+                         ('4010b5', '4010b7'), ('4010b5', '-1'),
+                         ('4010b7', '4010b9'), ('4010b7', 'ff'),
+                         ('4010b9', '-1')
                          ]
         expectedEdges = [("%08X" % int(x, 16), "%08X" % int(y, 16))
                          for (x, y) in expectedEdges]
-        self.assertEqual(cfgBuilder.cfg.number_of_nodes(), len(expectedBlocks),
-                         '#nodes in CFG != expected #nodes')
-        self.assertEqual(cfgBuilder.cfg.number_of_edges(), len(expectedEdges),
-                         '#edge in CFG != expected #edges')
         for block in expectedBlocks:
             self.assertTrue(block in cfgBuilder.cfg.nodes(),
                             '%s not in CFG' % block)
         for edge in expectedEdges:
             self.assertTrue(edge in cfgBuilder.cfg.edges(),
                             '(%s, %s) not in CFG' % (edge[0], edge[1]))
+
+        self.assertEqual(cfgBuilder.cfg.number_of_nodes(), len(expectedBlocks),
+                         '#nodes in CFG != expected #nodes')
+        self.assertEqual(cfgBuilder.cfg.number_of_edges(), len(expectedEdges),
+                         '#edge in CFG != expected #edges')
 
     # @unittest.skip("Uncomment to run")
     def test_build(self):

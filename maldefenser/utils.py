@@ -3,8 +3,9 @@ import re
 import glog as log
 from typing import List
 
-AddrNotFound = -1
 FakeCalleeAddr = -2
+InvalidAddr = -1
+
 CodeSegLogName = 'EmptyCodeSeg.err'
 
 
@@ -48,7 +49,7 @@ def findAddrInOperators(operators: List[str]) -> int:
                 return baseAddrInExpr(part)
 
     log.debug(f'"{operators}" is NOT convertiable to hex int')
-    return AddrNotFound
+    return FakeCalleeAddr
 
 
 def delCodeSegLog() -> None:

@@ -5,7 +5,7 @@ import glog as log
 import networkx as nx
 import instructions as isn
 import matplotlib.pyplot as plt
-from utils import FakeCalleeAddr, addCodeSegLog
+from utils import FakeCalleeAddr, addCodeSegLog, InvalidAddr
 from collections import OrderedDict
 from typing import List, Dict
 
@@ -35,6 +35,8 @@ class ControlFlowGraphBuilder(object):
 
         self.program: Dict[str, str] = {}  # Addr to raw string instruction
         self.addr2Inst: OrderedDict[int, isn.Instruction] = OrderedDict()
+        self.addr2InstAux: OrderedDict[int, isn.Instruction] = OrderedDict()
+
         self.addr2Block: Dict[int, Block] = {}
 
     def buildControlFlowGraph(self) -> None:
@@ -151,6 +153,7 @@ class ControlFlowGraphBuilder(object):
                 continue
             if inst.find(' = ') != -1 or ptrPattern.match(inst):
                 log.debug(f'Ptr declare found: {inst}')
+                foundDataDeclare += inst + ' '
                 continue
             if inst.startswith('dw ') or inst.find(' dw ') != -1:
                 foundDataDeclare += inst + ' '
@@ -243,15 +246,26 @@ class ControlFlowGraphBuilder(object):
         for addr, inst in self.addr2Inst.items():
             inst.accept(self)
 
+        self.addr2Inst.update(self.addr2InstAux)
+
+    def addAuxilaryInst(self, addr, operandName='') -> None:
+        if addr not in self.addr2InstAux:
+            self.addr2InstAux[addr] = isn.Instruction(
+                addr, operand=operandName)
+            self.addr2InstAux[addr].start = True
+            self.addr2InstAux[addr].fallThrough = False
+
     def enter(self, inst, enterAddr: int) -> None:
         if enterAddr == FakeCalleeAddr:
-            """Unknown extern code object"""
-            log.debug(f'Enter fake callee addr {inst.address}')
+            log.debug(f'Enter extern callee addr from {inst}')
+            self.addAuxilaryInst(enterAddr, 'extrn_sym')
         elif enterAddr >= 0 and enterAddr < 256:
-            """Software interrup"""
             log.debug(f'Enter software interrupt {enterAddr:x}')
-        elif enterAddr < self.programStart or enterAddr > self.programEnd:
-            log.error(f'Unable to enter {enterAddr:x} from {inst}')
+            self.addAuxilaryInst(enterAddr, 'softirq_%X' % enterAddr)
+        elif enterAddr not in self.addr2Inst:
+            log.error(f'Unable to enter invalid address {enterAddr:x} from {inst}')
+            self.addAuxilaryInst(InvalidAddr, 'invalid')
+            self.addr2Inst[inst.address].branchTo = InvalidAddr
         else:
             log.debug(f'Enter instruction at {enterAddr:x} from {inst}')
             self.addr2Inst[enterAddr].start = True
@@ -312,6 +326,7 @@ class ControlFlowGraphBuilder(object):
         if addr not in self.addr2Block:
             block = Block()
             block.startAddr = addr
+            block.endAddr = addr
             self.addr2Block[addr] = block
             log.debug(f'Create new block starting at {addr:x}')
 
@@ -333,7 +348,7 @@ class ControlFlowGraphBuilder(object):
                     currBlock.edgeList.append(nextBlock.startAddr)
                     log.debug(f'block {currBlock.startAddr:x} => next {nextBlock.startAddr:x}')
 
-            if inst.branchTo > 0 or inst.branchTo == FakeCalleeAddr:
+            if inst.branchTo is not None:
                 block = self.getBlockAtAddr(inst.branchTo)
                 currBlock.edgeList.append(block.startAddr)
                 log.debug(f'block {currBlock.startAddr:x} => branch {block.startAddr:x}')

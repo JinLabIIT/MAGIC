@@ -2,7 +2,7 @@
 import re
 import glog as log
 from typing import List
-from utils import findAddrInOperators, FakeCalleeAddr, AddrNotFound
+from utils import findAddrInOperators
 
 
 DataInstList = ['dd', 'db', 'dw', 'dq',
@@ -148,14 +148,15 @@ RegularInstDict = {k: v for v, k in enumerate(RegularInstList)}
 class Instruction(object):
     """Abstract assembly instruction, used as default for unknown ones"""
 
-    def __init__(self, addr: str) -> None:
+    def __init__(self, addr: str, operand: str = '', operators: List[str] = []) -> None:
         super(Instruction, self).__init__()
-        self.address: int = int(addr, 16)
-        self.size: int = 0
-        self.operand: str = None
+        self.address: int = int(str(addr), 16)
+        self.operand: str = operand
+        self.operators: List[str] = operators
 
+        self.size: int = 0
         self.start: bool = False
-        self.branchTo: int = AddrNotFound
+        self.branchTo: int = None
         self.fallThrough: bool = True
         self.call: bool = False
         self.ret: bool = False
@@ -176,60 +177,50 @@ class DataInst(Instruction):
     """Variable/data declaration statements don't have operand"""
 
     def __init__(self, addr: str, operators: List[str]) -> None:
-        super(DataInst, self).__init__(addr)
-        self.operators: List[str] = operators
+        super(DataInst, self).__init__(addr, operators=operators)
 
     def accept(self, builder):
         builder.visitDefault(self)
 
     def __repr__(self) -> str:
-        return "%X: %s %s" % (self.address, self.operand, self.operators)
+        operators = " ".join(self.operators)
+        return "%X: %s %s" % (self.address, self.operand, operators)
 
 
 class RegularInst(Instruction):
     """Regular instruction"""
 
     def __init__(self, addr: str, operand: str, operators: List[str]) -> None:
-        super(RegularInst, self).__init__(addr)
-        self.operand = operand
-        self.operators: List[str] = operators
+        super(RegularInst, self).__init__(addr, operand, operators)
 
     def accept(self, builder):
         builder.visitDefault(self)
 
     def __repr__(self) -> str:
-        return "%X: %s %s" % (self.address, self.operand, self.operators)
-
+        operators = " ".join(self.operators)
+        return "%X: %s %s" % (self.address, self.operand, operators)
 
 class CallingInst(Instruction):
     """Calling"""
 
     def __init__(self, addr: str, operand: str, operators: List[str]) -> None:
-        super(CallingInst, self).__init__(addr)
-        self.operand = operand
-        self.operators: List[str] = operators
+        super(CallingInst, self).__init__(addr, operand, operators)
 
     def accept(self, builder):
         builder.visitCalling(self)
 
     def findAddrInInst(self):
-        addr = findAddrInOperators(self.operators)
-        if addr < 0:
-            return FakeCalleeAddr
-        else:
-            return addr
+        return findAddrInOperators(self.operators)
 
     def __repr__(self) -> str:
-        return "%X: %s %s" % (self.address, self.operand, self.operators)
-
+        operators = " ".join(self.operators)
+        return "%X: %s %s" % (self.address, self.operand, operators)
 
 class ConditionalJumpInst(Instruction):
     """ConditionalJump"""
 
     def __init__(self, addr: str, operand: str, operators: List[str]) -> None:
-        super(ConditionalJumpInst, self).__init__(addr)
-        self.operand = operand
-        self.operators: List[str] = operators
+        super(ConditionalJumpInst, self).__init__(addr, operand, operators)
 
     def accept(self, builder):
         builder.visitConditionalJump(self)
@@ -238,16 +229,14 @@ class ConditionalJumpInst(Instruction):
         return findAddrInOperators(self.operators)
 
     def __repr__(self) -> str:
-        return "%X: %s %s" % (self.address, self.operand, self.operators)
-
+        operators = " ".join(self.operators)
+        return "%X: %s %s" % (self.address, self.operand, operators)
 
 class UnconditionalJumpInst(Instruction):
     """UnconditionalJump"""
 
     def __init__(self, addr: str, operand: str, operators: List[str]) -> None:
-        super(UnconditionalJumpInst, self).__init__(addr)
-        self.operand = operand
-        self.operators: List[str] = operators
+        super(UnconditionalJumpInst, self).__init__(addr, operand, operators)
 
     def accept(self, builder):
         builder.visitUnconditionalJump(self)
@@ -256,16 +245,15 @@ class UnconditionalJumpInst(Instruction):
         return findAddrInOperators(self.operators)
 
     def __repr__(self) -> str:
-        return "%X: %s %s" % (self.address, self.operand, self.operators)
+        operators = " ".join(self.operators)
+        return "%X: %s %s" % (self.address, self.operand, operators)
 
 
 class RepeatInst(Instruction):
     """Repeat just the instruction: conditional jump to itself"""
 
     def __init__(self, addr: str, operand: str, operators: List[str]) -> None:
-        super(RepeatInst, self).__init__(addr)
-        self.operand = operand
-        self.operators: List[str] = operators
+        super(RepeatInst, self).__init__(addr, operand, operators)
 
     def accept(self, builder):
         builder.visitConditionalJump(self)
@@ -274,23 +262,21 @@ class RepeatInst(Instruction):
         return self.address
 
     def __repr__(self) -> str:
-        return "%X: %s %s" % (self.address, self.operand, self.operators)
-
+        operators = " ".join(self.operators)
+        return "%X: %s %s" % (self.address, self.operand, operators)
 
 class EndHereInst(Instruction):
     """EndHere"""
 
     def __init__(self, addr: str, operand: str, operators: List[str]) -> None:
-        super(EndHereInst, self).__init__(addr)
-        self.operand = operand
-        self.operators: List[str] = operators
+        super(EndHereInst, self).__init__(addr, operand, operators)
 
     def accept(self, builder):
         builder.visitEndHere(self)
 
     def __repr__(self) -> str:
-        return "%X: %s %s" % (self.address, self.operand, self.operators)
-
+        operators = " ".join(self.operators)
+        return "%X: %s %s" % (self.address, self.operand, operators)
 
 class InstBuilder(object):
     """Create instructions based on string content"""
