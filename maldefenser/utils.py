@@ -5,7 +5,6 @@ from typing import List
 
 FakeCalleeAddr = -2
 InvalidAddr = -1
-
 CodeSegLogName = 'EmptyCodeSeg.err'
 
 
@@ -45,7 +44,7 @@ def findAddrInOperators(operators: List[str]) -> int:
     for item in operators:
         for part in item.split('_'):
             if hexPattern.match(part) is not None:
-                log.debug(f'"{part}" in {operators} is convertiable to hex')
+                log.debug(f'Convert "{part}" in {operators} to hex')
                 return baseAddrInExpr(part)
 
     log.debug(f'"{operators}" is NOT convertiable to hex int')

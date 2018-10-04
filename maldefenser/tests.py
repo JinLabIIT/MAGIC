@@ -67,7 +67,6 @@ class TestCfgBuildedr(unittest.TestCase):
                          ('4010b3', '4010b5'), ('4010b3', '401084'),
                          ('4010b5', '4010b7'), ('4010b5', '-1'),
                          ('4010b7', '4010b9'), ('4010b7', 'ff'),
-                         ('4010b9', '-1')
                          ]
         expectedEdges = [("%08X" % int(x, 16), "%08X" % int(y, 16))
                          for (x, y) in expectedEdges]

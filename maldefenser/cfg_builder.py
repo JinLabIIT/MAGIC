@@ -109,10 +109,12 @@ class ControlFlowGraphBuilder(object):
             endIdx = self.indexOfComment(decodedElems)
             if startIdx < endIdx:
                 instElems = [addr] + decodedElems[startIdx: endIdx]
-                log.debug(f"Processed line {lineNum}: '{' '.join(decodedElems)}' => '{' '.join(instElems)}'")
+                s1, s2 = ' '.join(decodedElems), ' '.join(instElems)
+                log.debug(f"Processed line {lineNum}: '{s1}' => '{s2}'")
                 fileOutput.write(" ".join(instElems) + '\n')
             else:
-                log.debug(f'No instruction at line {lineNum}: {" ".join(decodedElems)}')
+                l = " ".join(decodedElems)
+                log.debug(f'No instruction at line {lineNum}: {l}')
 
             lineNum += 1
 
@@ -199,7 +201,6 @@ class ControlFlowGraphBuilder(object):
                     sameAddrInsts.append(" ".join(inst))
                 else:
                     if addr != currAddr:
-                        log.debug(f"Aggreate {len(sameAddrInsts)} insts for addr {currAddr}")
                         self.aggregate(currAddr, sameAddrInsts)
                         sameAddrInsts.clear()
 
@@ -207,7 +208,6 @@ class ControlFlowGraphBuilder(object):
                     sameAddrInsts.append(" ".join(inst))
 
             if len(sameAddrInsts) > 0:
-                log.debug(f"Aggreate {len(sameAddrInsts)} insts for addr {currAddr}")
                 self.aggregate(currAddr, sameAddrInsts)
                 sameAddrInsts.clear()
 
@@ -239,7 +239,7 @@ class ControlFlowGraphBuilder(object):
             else:
                 addCodeSegLog(self.binaryId)
 
-        log.info(f'Program starts at {self.programStart:x} ends at {self.programEnd:x}')
+        log.info(f'Program range [{self.programStart:x}, {self.programEnd:x}]')
 
     def visitInsts(self) -> None:
         log.info('**** Visit instructions ****')
@@ -263,7 +263,7 @@ class ControlFlowGraphBuilder(object):
             log.debug(f'Enter software interrupt {enterAddr:x}')
             self.addAuxilaryInst(enterAddr, 'softirq_%X' % enterAddr)
         elif enterAddr not in self.addr2Inst:
-            log.error(f'Unable to enter invalid address {enterAddr:x} from {inst}')
+            log.error(f'Enter invalid address {enterAddr:x} from {inst}')
             self.addAuxilaryInst(InvalidAddr, 'invalid')
             self.addr2Inst[inst.address].branchTo = InvalidAddr
         else:
@@ -305,7 +305,8 @@ class ControlFlowGraphBuilder(object):
         """Stop fall throught"""
         self.addr2Inst[inst.address].fallThrough = False
         log.debug(f'Found end at {inst.address:x}')
-        self.enter(inst, inst.address + inst.size)
+        if inst.address + inst.size <= self.programEnd:
+            self.enter(inst, inst.address + inst.size)
 
     def visitDefault(self, inst) -> None:
         pass
@@ -328,12 +329,15 @@ class ControlFlowGraphBuilder(object):
             block.startAddr = addr
             block.endAddr = addr
             self.addr2Block[addr] = block
-            log.debug(f'Create new block starting at {addr:x}')
+            log.debug(f'Create new block starting/ending at {addr:x}')
 
         return self.addr2Block[addr]
 
     def connectBlocks(self) -> None:
-        """Group instructions into blocks connected based on branch and fall through"""
+        """
+        Group instructions into blocks, and
+        connected based on branch and fall through
+        """
         log.info('**** Create and connect blocks ****')
         currBlock = None
         for (addr, inst) in sorted(self.addr2Inst.items()):
@@ -346,12 +350,14 @@ class ControlFlowGraphBuilder(object):
                 if inst.fallThrough is True and nextInst.start is True:
                     nextBlock = self.getBlockAtAddr(nextAddr)
                     currBlock.edgeList.append(nextBlock.startAddr)
-                    log.debug(f'block {currBlock.startAddr:x} => next {nextBlock.startAddr:x}')
+                    addr1, addr2 = currBlock.startAddr, nextBlock.startAddr
+                    log.debug(f'Block {addr1:x} falls to {addr2:x}')
 
             if inst.branchTo is not None:
                 block = self.getBlockAtAddr(inst.branchTo)
                 currBlock.edgeList.append(block.startAddr)
-                log.debug(f'block {currBlock.startAddr:x} => branch {block.startAddr:x}')
+                addr1, addr2 = currBlock.startAddr, block.startAddr
+                log.debug(f'Block {addr1:x} branches to {addr2:x}')
 
             currBlock.instList.append(inst)
             currBlock.endAddr = max(currBlock.endAddr, inst.address)

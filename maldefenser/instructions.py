@@ -18,9 +18,11 @@ ConditionalJumpInstList = ['ja', 'jb', 'jbe', 'jcxz', 'jecxz', 'jg', 'jge',
                            'jo', 'jp', 'js', 'jz',
                            'loop', 'loope', 'loopne', 'loopw',
                            'loopwe', 'loopwne',]
-ConditionalJumpInstDict = {k: v for v, k in enumerate(ConditionalJumpInstList)}
+ConditionalJumpInstDict = {k: v for v, k in
+                           enumerate(ConditionalJumpInstList)}
 UnconditionalJumpInstList = ['jmp']
-UnconditionalJumpInstDict = {k: v for v, k in enumerate(UnconditionalJumpInstList)}
+UnconditionalJumpInstDict = {k: v for v, k in
+                             enumerate(UnconditionalJumpInstList)}
 EndHereInstList = ['end',
                    'iret', 'iretw',
                    'retf', 'reti', 'retfw', 'retn', 'retnw',
@@ -30,10 +32,12 @@ EndHereInstList = ['end',
 EndHereInstDict = {k: v for v, k in enumerate(EndHereInstList)}
 RepeatInstList = ['rep', 'repe', 'repne']
 RepeatInstDict = {k: v for v, k in enumerate(RepeatInstList)}
-RegularInstList = ['aaa', 'aad', 'aam', 'aas', 'adc', 'add', 'addpd', 'addps',
-                   'addsd', 'addss', 'addsubpd', 'addsubps', 'align', 'and',
-                   'andnpd', 'andnps', 'andpd', 'andps', 'arpl',
-                   'bound', 'bsf', 'bsr', 'bswap', 'bt', 'btc', 'btr', 'bts',
+RegularInstList = ['aaa', 'aad', 'aam', 'aas', 'adc', 'add', 'addpd',
+                   'addps', 'addsd', 'addss', 'addsubpd', 'addsubps',
+                   'align', 'and', 'andnpd', 'andnps', 'andpd',
+                   'andps', 'arpl',
+                   'bound', 'bsf', 'bsr', 'bswap', 'bt', 'btc',
+                   'btr', 'bts',
                    'cbw', 'cdq', 'clc', 'cld', 'clflush', 'cli', 'clts',
                    'cmc', 'cmova', 'cmovb', 'cmovbe', 'cmovg', 'cmovge',
                    'cmovl', 'cmovle', 'cmovnb', 'cmovno', 'cmovnp',
@@ -45,10 +49,11 @@ RegularInstList = ['aaa', 'aad', 'aam', 'aas', 'adc', 'add', 'addpd', 'addps',
                    'comiss', 'cpuid', 'cwd', 'cwde',
                    'daa', 'das', 'dec', 'div', 'divps', 'divsd', 'divss',
                    'emms', 'enter', 'enterw', 'extractps',
-                   'fabs', 'fadd', 'faddp', 'fbld', 'fbstp', 'fchs', 'fclex',
-                   'fcmovb', 'fcmovbe', 'fcmove', 'fcmovnb', 'fcmovnbe',
-                   'fcmovne', 'fcmovnu', 'fcmovu', 'fcom', 'fcomi', 'fcomip',
-                   'fcomp', 'fcompp', 'fcos', 'fdecstp', 'fdiv', 'fdivp',
+                   'fabs', 'fadd', 'faddp', 'fbld', 'fbstp', 'fchs',
+                   'fclex', 'fcmovb', 'fcmovbe', 'fcmove', 'fcmovnb',
+                   'fcmovnbe', 'fcmovne', 'fcmovnu', 'fcmovu', 'fcom',
+                   'fcomi', 'fcomip', 'fcomp', 'fcompp', 'fcos',
+                   'fdecstp', 'fdiv', 'fdivp',
                    'fdivr', 'fdivrp', 'femms', 'ffree', 'ffreep', 'fiadd',
                    'ficom', 'ficomp', 'fidiv', 'fidivr', 'fild', 'fimul',
                    'fincstp', 'fist', 'fistp', 'fisttp', 'fisub', 'fisubr',
@@ -58,8 +63,9 @@ RegularInstList = ['aaa', 'aad', 'aam', 'aas', 'adc', 'add', 'addpd', 'addps',
                    'fprem', 'fptan', 'frndint', 'frstor', 'fsave',
                    'fscale', 'fsetpm', 'fsin', 'fsincos', 'fsqrt', 'fst',
                    'fstcw', 'fstenv', 'fstp', 'fstsw', 'fsub', 'fsubp',
-                   'fsubr', 'fsubrp', 'ftst', 'fucom', 'fucomi', 'fucomip',
-                   'fucomp', 'fucompp', 'fxam', 'fxch', 'fxsave', 'fxtract',
+                   'fsubr', 'fsubrp', 'ftst', 'fucom', 'fucomi',
+                   'fucomip', 'fucomp', 'fucompp', 'fxam', 'fxch',
+                   'fxsave', 'fxtract',
                    'getsec',
                    'hlt', 'hnt', 'ht',
                    'icebp', 'idiv', 'imul', 'in', 'inc', 'ins', 'insb',
@@ -98,8 +104,10 @@ RegularInstList = ['aaa', 'aad', 'aam', 'aas', 'adc', 'add', 'addpd', 'addps',
                    'psllq', 'psllw', 'psrad', 'psraw','psrld', 'psrldq',
                    'psrlq', 'psrlw', 'psubb', 'psubd', 'psubq', 'psubsb',
                    'psubsw', 'psubusb', 'psubusw', 'psubw', 'pswapd',
-                   'ptest', 'punpckhbw', 'punpckhdq', 'punpckhqdq', 'punpckhwd', 'punpcklbw', 'punpckldq', 'punpcklqdq', 'punpcklwd',
-                   'push', 'pusha', 'pushaw', 'pushf', 'pushfw', 'pxor',
+                   'ptest', 'punpckhbw', 'punpckhdq', 'punpckhqdq',
+                   'punpckhwd', 'punpcklbw', 'punpckldq', 'punpcklqdq',
+                   'punpcklwd', 'push', 'pusha', 'pushaw',
+                   'pushf', 'pushfw', 'pxor',
                    'rc', 'rcl', 'rcpps', 'rcpss', 'rcr', 'rdmsr', 'rdpmc',
                    'rdrand', 'rdtsc', 'rol', 'ror', 'roundps', 'rsldt',
                    'rsm', 'rsqrtps', 'rsqrtss', 'rsts',
@@ -107,9 +115,10 @@ RegularInstList = ['aaa', 'aad', 'aam', 'aas', 'adc', 'add', 'addpd', 'addps',
                    'scasw', 'setalc', 'setb', 'setbe', 'setl', 'setle',
                    'setnb', 'setnbe', 'setnl', 'setnle', 'setno', 'setnp',
                    'setns', 'setnz', 'seto', 'setp', 'sets', 'setz',
-                   'sfence', 'sgdt', 'shl', 'shld', 'shr', 'shrd', 'shufpd',
-                   'shufps', 'sidt', 'sldt', 'sqrtps', 'sqrtsd', 'sqrtss',
-                   'stc', 'std', 'sti', 'stmxcsr', 'stos', 'stosb', 'stosd',
+                   'sfence', 'sgdt', 'shl', 'shld', 'shr', 'shrd',
+                   'shufpd', 'shufps', 'sidt', 'sldt', 'sqrtps',
+                   'sqrtsd', 'sqrtss', 'stc', 'std', 'sti',
+                   'stmxcsr', 'stos', 'stosb', 'stosd',
                    'stosw', 'str', 'sub', 'subpd', 'subps', 'subsd',
                    'subss', 'svldt', 'svts',
                    'test',
@@ -124,11 +133,13 @@ RegularInstList = ['aaa', 'aad', 'aam', 'aas', 'adc', 'add', 'addpd', 'addps',
                    'vmovntdq', 'vmovntpd', 'vmovntps', 'vmovntsd',
                    'vmovsd', 'vmovsldup', 'vmovss', 'vmovupd', 'vmovups',
                    'vmptrld', 'vmptrst', 'vmread', 'vmulps', 'vmulss',
-                   'vmwrite', 'vorpd','vpackssdw', 'vpacksswb', 'vpackuswb',
-                   'vpaddb', 'vpaddd', 'vpaddq', 'vpaddsb', 'vpaddsw',
+                   'vmwrite', 'vorpd','vpackssdw', 'vpacksswb',
+                   'vpackuswb', 'vpaddb', 'vpaddd', 'vpaddq',
+                   'vpaddsb', 'vpaddsw',
                    'vpaddusb', 'vpaddusw', 'vpaddw', 'vpandn', 'vpcext',
-                   'vpclmulqdq', 'vpcmpeqb', 'vpcmpeqd', 'vpcmpeqw', 'vpcmpgtb',
-                   'vpcmpgtd', 'vpcmpgtw', 'vpermilps', 'vpermq',
+                   'vpclmulqdq', 'vpcmpeqb', 'vpcmpeqd',
+                   'vpcmpeqw', 'vpcmpgtb', 'vpcmpgtd', 'vpcmpgtw',
+                   'vpermilps', 'vpermq',
                    'vpextrw', 'vpinsrw', 'vpmaddwd', 'vpmaxub', 'vpmulhuw',
                    'vpmulhw', 'vpmullw', 'vpsadbw', 'vpshufhw', 'vpshuflw',
                    'vpsllq', 'vpsllw', 'vpsrad', 'vpsrld', 'vpsrlq',
@@ -148,9 +159,15 @@ RegularInstDict = {k: v for v, k in enumerate(RegularInstList)}
 class Instruction(object):
     """Abstract assembly instruction, used as default for unknown ones"""
 
-    def __init__(self, addr: str, operand: str = '', operators: List[str] = []) -> None:
+    def __init__(self, addr: str,
+                 operand: str = '',
+                 operators: List[str] = []) -> None:
         super(Instruction, self).__init__()
-        self.address: int = int(str(addr), 16)
+        if isinstance(addr, str):
+            self.address = int(addr, 16)
+        else:
+            self.address = addr
+
         self.operand: str = operand
         self.operators: List[str] = operators
 
@@ -190,7 +207,9 @@ class DataInst(Instruction):
 class RegularInst(Instruction):
     """Regular instruction"""
 
-    def __init__(self, addr: str, operand: str, operators: List[str]) -> None:
+    def __init__(self, addr: str,
+                 operand: str,
+                 operators: List[str]) -> None:
         super(RegularInst, self).__init__(addr, operand, operators)
 
     def accept(self, builder):
@@ -203,7 +222,9 @@ class RegularInst(Instruction):
 class CallingInst(Instruction):
     """Calling"""
 
-    def __init__(self, addr: str, operand: str, operators: List[str]) -> None:
+    def __init__(self, addr: str,
+                 operand: str,
+                 operators: List[str]) -> None:
         super(CallingInst, self).__init__(addr, operand, operators)
 
     def accept(self, builder):
@@ -219,7 +240,9 @@ class CallingInst(Instruction):
 class ConditionalJumpInst(Instruction):
     """ConditionalJump"""
 
-    def __init__(self, addr: str, operand: str, operators: List[str]) -> None:
+    def __init__(self, addr: str,
+                 operand: str,
+                 operators: List[str]) -> None:
         super(ConditionalJumpInst, self).__init__(addr, operand, operators)
 
     def accept(self, builder):
@@ -235,8 +258,12 @@ class ConditionalJumpInst(Instruction):
 class UnconditionalJumpInst(Instruction):
     """UnconditionalJump"""
 
-    def __init__(self, addr: str, operand: str, operators: List[str]) -> None:
-        super(UnconditionalJumpInst, self).__init__(addr, operand, operators)
+    def __init__(self, addr: str,
+                 operand: str,
+                 operators: List[str]) -> None:
+        super(UnconditionalJumpInst, self).__init__(addr,
+                                                    operand,
+                                                    operators)
 
     def accept(self, builder):
         builder.visitUnconditionalJump(self)
@@ -252,7 +279,9 @@ class UnconditionalJumpInst(Instruction):
 class RepeatInst(Instruction):
     """Repeat just the instruction: conditional jump to itself"""
 
-    def __init__(self, addr: str, operand: str, operators: List[str]) -> None:
+    def __init__(self, addr: str,
+                 operand: str,
+                 operators: List[str]) -> None:
         super(RepeatInst, self).__init__(addr, operand, operators)
 
     def accept(self, builder):
@@ -268,7 +297,9 @@ class RepeatInst(Instruction):
 class EndHereInst(Instruction):
     """EndHere"""
 
-    def __init__(self, addr: str, operand: str, operators: List[str]) -> None:
+    def __init__(self, addr: str,
+                 operand: str,
+                 operators: List[str]) -> None:
         super(EndHereInst, self).__init__(addr, operand, operators)
 
     def accept(self, builder):
