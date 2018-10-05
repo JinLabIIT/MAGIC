@@ -92,6 +92,10 @@ class ControlFlowGraphBuilder(object):
         for line in fileInput:
             elems = line.split()
             decodedElems = [x.decode("utf-8", "ignore") for x in elems]
+            if len(decodedElems) == 0:
+                lineNum += 1
+                continue
+
             seg = decodedElems.pop(0)
             addr = self.addrInCodeSegment(seg)
             if addr is "NotInCodeSeg":
@@ -290,7 +294,6 @@ class ControlFlowGraphBuilder(object):
 
         self.addr2Inst[inst.address].branchTo = callAddr
         self.enter(inst, callAddr)
-        self.enter(inst, inst.address + inst.size)
 
     def jump(self, inst) -> None:
         """Unconditional jump to another address"""
@@ -358,6 +361,9 @@ class ControlFlowGraphBuilder(object):
                 currBlock.edgeList.append(block.startAddr)
                 addr1, addr2 = currBlock.startAddr, block.startAddr
                 log.debug(f'Block {addr1:x} branches to {addr2:x}')
+                if inst.call is True:
+                    block.edgeList.append(currBlock.startAddr)
+                    log.debug(f'Block {addr2:x} return back to {addr1:x}')
 
             currBlock.instList.append(inst)
             currBlock.endAddr = max(currBlock.endAddr, inst.address)
