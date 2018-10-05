@@ -1,6 +1,9 @@
 import re
 import numpy as np
-from networkx import number_of_nodes
+import networkx as nx
+import glog as log
+from typing import List
+
 
 transfer = ['enter', 'leave', 'jcxz', 'iret', 'ja', 'jb', 'jbe',
             'jcxz', 'jecxz', 'jg', 'jge', 'jl', 'jle', 'jmp', 'jnb',
@@ -72,82 +75,82 @@ load = ['fist', 'fistp', 'fisttp', 'fld', 'fld1', 'fldcw', 'fldenv',
         'wbinvd']
 
 
-def classify_operator(operator):
-    if operator in transfer:
+def classifyOperand(operand: str) -> int:
+    if operand in transfer:
+        log.info(f'{operand} belong to transfer')
         return 0
-    elif operator in call:
+    elif operand in call:
+        log.info(f'{operand} belong to transfer')
         return 1
-    elif operator in arithemtic:
+    elif operand in arithemtic:
+        log.info(f'{operand} belong to transfer')
         return 2
-    elif operator in compare:
+    elif operand in compare:
+        log.info(f'{operand} belong to transfer')
         return 3
-    elif operator in crypto:
+    elif operand in crypto:
+        log.info(f'{operand} belong to transfer')
         return 4
-    elif operator in mov:
+    elif operand in mov:
+        log.info(f'{operand} belong to transfer')
         return 5
     else:
+        log.error(f'Unable to classify "{operand}"')
         return 6
 
 
-def match_constant(line):
+def matchConstant(line: str) -> List[int]:
     """Parse the numeric/string constants in an operand"""
     operand = line.strip('\n\r\t ')
-    numeric_cnts = 0
-    string_cnts = 0
+    numericCnts = 0
+    stringCnts = 0
 
     """
     Whole operand is a num OR leading num in expression.
     E.g. "0ABh", "589h", "0ABh" in "0ABh*589h"
     """
-    whole_num = r'^([1-9][0-9A-F]*|0[A-F][0-9A-F]*)h?.*'
-    pattern = re.compile(whole_num)
+    wholeNum = r'^([1-9][0-9A-F]*|0[A-F][0-9A-F]*)h?.*'
+    pattern = re.compile(wholeNum)
     if pattern.match(operand):
-        numeric_cnts += 1
+        numericCnts += 1
+        log.info(f'Match whole number in {operand}')
         # numerics.append('%s:WHOLE/LEAD' % operand)
 
     """Number inside expression, exclude the leading one."""
-    num_in_expr = r'([+*/:]|-)([1-9][0-9A-F]*|0[A-F][0-9A-F]*)h?'
-    pattern = re.compile(num_in_expr)
+    numInExpr = r'([+*/:]|-)([1-9][0-9A-F]*|0[A-F][0-9A-F]*)h?'
+    pattern = re.compile(numInExpr)
     match = pattern.findall(operand)
     if len(match) > 0:
-        numeric_cnts += 1
+        numericCnts += 1
+        log.info(f'Match in-expression number in {operand}')
         # numerics.append('%s:%d' % (operand, len(match)))
 
     """Const string inside double/single quote"""
-    str_re = r'["\'][^"]+["\']'
-    pattern = re.compile(str_re)
+    strRe = r'["\'][^"]+["\']'
+    pattern = re.compile(strRe)
     match = pattern.findall(operand)
     if len(match) > 0:
-        string_cnts += 1
+        stringCnts += 1
+        log.info(f'Match str const in {operand}')
         # strings.append('%s:%d' % (operand, len(match)))
-        
-    return [numeric_cnts, string_cnts]
+
+    return [numericCnts, stringCnts]
 
 
-def node_features(G):
+def nodeFeatures(G: nx.DiGraph):
     """
     Extract features in each node:
     7 operator features + 2 operand features.
     """
-    features = np.zeros((number_of_nodes(G), 7 + 2))
+    features = np.zeros((G.number_of_nodes(), 7 + 2))
     for (i, (node, attributes)) in enumerate(G.nodes(data=True)):
-        instructions = attributes['Ins']
-        for (addr, inst) in instructions:
-            if len(inst) == 0:
-                break
-            """
-            Format of assembly code: "operator operand, operand, ..., operand"
-            """
-            operator_class = classify_operator(inst[0])
+        block = attributes['block']
+        for inst in block.instList:
+            operator_class = classifyOperand(inst.operand)
             features[i, operator_class] += 1
-            if len(inst) == 1:
-                continue
-                
-            for part in inst[1].split(','):
-                comment_idx = part.find(';')
-                operand = part if comment_idx == -1 else part[:comment_idx]
-                numeric_cnts, string_cnts = match_constant(operand)
+            for operator in inst.operators:
+                numeric_cnts, string_cnts = matchConstant(operator)
                 features[i, -2] += numeric_cnts
                 features[i, -1] += string_cnts
-                
+
     return features

@@ -2,6 +2,7 @@ import glog as log
 import unittest
 from cfg_builder import ControlFlowGraphBuilder
 from process_graphs import DataProvider
+from node_attributes import nodeFeatures
 from utils import delCodeSegLog, evalHexAddSubExpr
 
 
@@ -29,7 +30,7 @@ class TestCfgBuildedr(unittest.TestCase):
             cfgBuilder = ControlFlowGraphBuilder(bId, pathPrefix)
             cfgBuilder.parseInstructions()
 
-    # @unittest.skip("Uncomment to run")
+    @unittest.skip("Uncomment to run")
     def test_buildSingle(self):
         pathPrefix = '../DataSamples'
         bId = 'test'
@@ -82,7 +83,7 @@ class TestCfgBuildedr(unittest.TestCase):
         self.assertEqual(cfgBuilder.cfg.number_of_edges(), len(expectedEdges),
                          '#edge in CFG != expected #edges')
 
-    # @unittest.skip("Uncomment to run")
+    @unittest.skip("Uncomment to run")
     def test_build(self):
         pathPrefix = '../TrainSet'
         binaryIds = [
@@ -130,7 +131,7 @@ class TestCfgBuildedr(unittest.TestCase):
         dataProvider = DataProvider(pathPrefix)
         dataProvider.discoverInstDictionary(binaryIds, 'ut_seen_inst')
 
-    # @unittest.skip("Uncomment to run")
+    @unittest.skip("Uncomment to run")
     def test_evalHexExpr(self):
         expressions = ['14769F + 48D - 48Dh - 14769Fh+ 14769F',
                        '4477DAB5F7',
@@ -139,6 +140,16 @@ class TestCfgBuildedr(unittest.TestCase):
         expectedRet = [0x14769F, 0x4477DAB5F7, 0x435C8D, 0x47]
         for expr, expected in zip(expressions, expectedRet):
             self.assertEqual(evalHexAddSubExpr(expr), expected)
+
+    # @unittest.skip("Uncomment to run")
+    def test_nodeAttributes(self):
+        pathPrefix = '../DataSamples'
+        bId = 'test'
+        log.info('Processing ' + pathPrefix + '/' + bId + '.asm')
+        cfgBuilder = ControlFlowGraphBuilder(bId, pathPrefix)
+        cfgBuilder.buildControlFlowGraph()
+        features = nodeFeatures(cfgBuilder.cfg)
+        print(features)
 
 
 if __name__ == '__main__':
