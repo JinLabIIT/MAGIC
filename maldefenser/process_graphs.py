@@ -6,6 +6,7 @@ import cfg_builder
 from typing import List
 from utils import delCodeSegLog
 
+
 class DataProvider(object):
     """Handle data location stuff"""
 

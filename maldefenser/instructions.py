@@ -2,7 +2,7 @@
 import re
 import glog as log
 from typing import List
-from utils import findAddrInOperators
+from utils import findAddrInOperators, matchConstant
 
 
 DataInstList = ['dd', 'db', 'dw', 'dq',
@@ -159,6 +159,13 @@ RegularInstDict = {k: v for v, k in enumerate(RegularInstList)}
 class Instruction(object):
     """Abstract assembly instruction, used as default for unknown ones"""
 
+    # Type of instruction, including
+    # [trans, call, math, cmp, crypto, mov, term, def, other]
+    oprandTypes = ['trans', 'call', 'math', 'cmp',
+                   'crypto', 'mov', 'term', 'def',
+                   'other']
+    operatorTypes = ['num_const', 'str_cont']
+
     def __init__(self, addr: str,
                  operand: str = '',
                  operators: List[str] = []) -> None:
@@ -185,6 +192,18 @@ class Instruction(object):
     def findAddrInInst(self) -> int:
         """Jumping instructions should override to provide jump address"""
         return None
+
+    def getOperandFeatures(self) -> List[int]:
+        return [0] * len(Instruction.oprandTypes)
+
+    def getOperatorFeatures(self) -> List[int]:
+        features = [0] * len(Instruction.operatorTypes)
+        for operator in self.operators:
+            numeric_cnts, string_cnts = matchConstant(operator)
+            features[0] += numeric_cnts
+            features[1] += string_cnts
+
+        return features
 
     def __repr__(self) -> str:
         return "%X: %s" % (self.address, self.operand)

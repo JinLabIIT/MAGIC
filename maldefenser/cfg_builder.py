@@ -4,6 +4,7 @@ import os
 import glog as log
 import networkx as nx
 import instructions as isn
+import numpy as np
 import matplotlib.pyplot as plt
 from utils import FakeCalleeAddr, addCodeSegLog, InvalidAddr
 from collections import OrderedDict
@@ -12,6 +13,7 @@ from typing import List, Dict
 
 class Block(object):
     """Block of control flow graph."""
+    instDim = len(isn.Instruction.oprandTypes) + len(isn.Instruction.operatorTypes)
 
     def __init__(self) -> None:
         super(Block, self).__init__()
@@ -19,6 +21,21 @@ class Block(object):
         self.endAddr = -1
         self.instList: List[isn.Instruction] = []
         self.edgeList: List[int] = []
+
+    def getAttributes(self):
+        instAttr = np.zeros((1, Block.instDim))
+        for inst in self.instList:
+            attr = inst.getOperandFeatures()
+            attr += inst.getOperatorFeatures()
+            instAttr += np.array(attr)
+
+        degree = len(self.edgeList)
+        numInst = len(self.instList)
+        return np.concatenate((instAttr, [degree, numInst]), axis=None)
+
+    @staticmethod
+    def getAttributesDim():
+        return Block.instDim + 2
 
 
 class ControlFlowGraphBuilder(object):
@@ -38,6 +55,11 @@ class ControlFlowGraphBuilder(object):
         self.addr2InstAux: OrderedDict[int, isn.Instruction] = OrderedDict()
 
         self.addr2Block: Dict[int, Block] = {}
+
+    def getControlFlowGraph(self) -> nx.DiGraph:
+        self.buildControlFlowGraph()
+        self.exportToNxGraph()
+        return self.cfg
 
     def buildControlFlowGraph(self) -> None:
         self.parseInstructions()
@@ -411,17 +433,28 @@ class ControlFlowGraphBuilder(object):
             os.remove(self.filePrefix + ext)
 
 
-if __name__ == '__main__':
-    log.setLevel("INFO")
-    pathPrefix = '../DataSamples'
-    binaryIds = ['test',
-                 'exGy3iaKJmRprdHcB0NO',
-                 '0Q4ALVSRnlHUBjyOb1sw',
-                 'jERVLnaTwhHFrZbvNfCy',
-                 'LgeBlyYQAD1NiVGRuxwk',
-                 '0qjuDC7Rhx9rHkLlItAp',
-                 ]
-    for bId in binaryIds:
-        log.info('Processing ' + bId + '.asm')
-        cfgBuilder = ControlFlowGraphBuilder(bId, pathPrefix)
-        cfgBuilder.buildControlFlowGraph()
+class AcfgBuilder(object):
+    def __init__(self, binaryId: str, pathPrefix: str) -> None:
+        super(AcfgBuilder, self).__init__()
+        self.cfgBuilder = ControlFlowGraphBuilder(binaryId, pathPrefix)
+        self.cfg: nx.DiGraph = None
+
+    def extractBlockAttributes(self):
+        """
+        Extract features in each block.
+        """
+        log.info('Extract attributes from blocks')
+        features = np.zeros((self.cfg.number_of_nodes(),
+                             Block.getAttributesDim()))
+        for (i, (node, attributes)) in enumerate(self.cfg.nodes(data=True)):
+            block = attributes['block']
+            log.info(f'Process block {block.startAddr:x}')
+            features[i, :] = block.getAttributes()
+
+        return features
+
+    def getAttributedCfg(self):
+        self.cfg = self.cfgBuilder.getControlFlowGraph()
+        blockAttrs = self.extractBlockAttributes()
+        adjMatrix = nx.adjacency_matrix(self.cfg)
+        return [blockAttrs, adjMatrix]

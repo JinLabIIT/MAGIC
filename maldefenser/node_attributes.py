@@ -81,25 +81,25 @@ load = ['fist', 'fistp', 'fisttp', 'fld', 'fld1', 'fldcw', 'fldenv',
 
 def classifyOperand(operand: str) -> int:
     if operand in transfer:
-        log.info(f'{operand} belong to transfer')
+        log.debug(f'{operand} belong to transfer')
         return 0
     elif operand in call:
-        log.info(f'{operand} belong to call')
+        log.debug(f'{operand} belong to call')
         return 1
     elif operand in arithemtic:
-        log.info(f'{operand} belong to arithemtic')
+        log.debug(f'{operand} belong to arithemtic')
         return 2
     elif operand in compare:
-        log.info(f'{operand} belong to compare')
+        log.debug(f'{operand} belong to compare')
         return 3
     elif operand in crypto:
-        log.info(f'{operand} belong to crypto')
+        log.debug(f'{operand} belong to crypto')
         return 4
     elif operand in mov:
-        log.info(f'{operand} belong to move')
+        log.debug(f'{operand} belong to move')
         return 5
     elif operand in terminate:
-        log.info(f'{operand} belong to terminate')
+        log.debug(f'{operand} belong to terminate')
         return 6
     else:
         log.error(f'Unable to classify "{operand}"')
@@ -120,7 +120,7 @@ def matchConstant(line: str) -> List[int]:
     pattern = re.compile(wholeNum)
     if pattern.match(operand):
         numericCnts += 1
-        log.info(f'Match whole number in {operand}')
+        log.debug(f'Match whole number in {operand}')
         # numerics.append('%s:WHOLE/LEAD' % operand)
 
     """Number inside expression, exclude the leading one."""
@@ -129,7 +129,7 @@ def matchConstant(line: str) -> List[int]:
     match = pattern.findall(operand)
     if len(match) > 0:
         numericCnts += 1
-        log.info(f'Match in-expression number in {operand}')
+        log.debug(f'Match in-expression number in {operand}')
         # numerics.append('%s:%d' % (operand, len(match)))
 
     """Const string inside double/single quote"""
@@ -138,7 +138,7 @@ def matchConstant(line: str) -> List[int]:
     match = pattern.findall(operand)
     if len(match) > 0:
         stringCnts += 1
-        log.info(f'Match str const in {operand}')
+        log.debug(f'Match str const in {operand}')
         # strings.append('%s:%d' % (operand, len(match)))
 
     return [numericCnts, stringCnts]
@@ -153,7 +153,7 @@ def nodeFeatures(G: nx.DiGraph):
     features = np.zeros((G.number_of_nodes(), 8 + 2))
     for (i, (node, attributes)) in enumerate(G.nodes(data=True)):
         block = attributes['block']
-        log.debug(f'Process block {block.startAddr}')
+        log.info(f'Process block {block.startAddr:x}')
         for inst in block.instList:
             operator_class = classifyOperand(inst.operand)
             features[i, operator_class] += 1
