@@ -1,4 +1,5 @@
 import glog as log
+import numpy as np
 import unittest
 from cfg_builder import ControlFlowGraphBuilder
 from process_graphs import DataProvider
@@ -37,7 +38,6 @@ class TestCfgBuildedr(unittest.TestCase):
         log.info('Processing ' + pathPrefix + '/' + bId + '.asm')
         cfgBuilder = ControlFlowGraphBuilder(bId, pathPrefix)
         cfgBuilder.buildControlFlowGraph()
-        cfgBuilder.printCfg()
         expectedBlocks = ['-2', '-1', 'ff',
                           '401048', '401050', '401052', '401054',
                           '401064', '40106d', '401076', '401079',
@@ -148,6 +148,32 @@ class TestCfgBuildedr(unittest.TestCase):
         cfgBuilder.buildControlFlowGraph()
         features = nodeFeatures(cfgBuilder.cfg)
         print(features)
+        expRet = np.array([
+            [0, 0, 0, 0, 0, 0, 0, 1, 0, 0],  # -2
+            [0, 0, 0, 0, 0, 0, 0, 1, 0, 0],  # -1
+            [0, 0, 0, 0, 0, 0, 0, 1, 0, 0],  # FF
+            [1, 0, 0, 0, 0, 1, 0, 0, 1, 0],  # 48
+            [1, 0, 0, 0, 0, 0, 0, 0, 1, 0],  # 50
+            [1, 0, 0, 0, 0, 0, 0, 1, 0, 0],  # 52
+            [0, 0, 0, 0, 0, 2, 0, 0, 7, 0],  # 54
+            [1, 2, 0, 0, 0, 2, 0, 0, 0, 0],  # 64
+            [1, 0, 1, 0, 0, 1, 0, 0, 2, 0],  # 6d
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # 76
+            [1, 1, 1, 0, 0, 1, 0, 0, 1, 0],  # 79
+            [1, 0, 1, 0, 0, 0, 1, 0, 1, 0],  # 80
+            [1, 0, 1, 1, 0, 2, 0, 0, 3, 0],  # 84
+            [1, 1, 1, 0, 0, 1, 0, 0, 3, 0],  # 90
+            [0, 0, 1, 0, 0, 3, 0, 0, 0, 0],  # a3
+            [0, 0, 0, 0, 0, 0, 1, 0, 0, 0],  # a9
+            [0, 0, 0, 0, 0, 0, 0, 0, 1, 0],  # ac
+            [1, 0, 0, 0, 0, 0, 0, 0, 4, 0],  # ae
+            [1, 0, 0, 0, 0, 0, 0, 0, 1, 0],  # b3
+            [1, 1, 0, 0, 0, 0, 0, 0, 0, 0],  # b5
+            [1, 0, 0, 0, 0, 0, 1, 0, 0, 0],  # b7
+        ], dtype=np.float32)
+        for (i, row) in enumerate(expRet):
+            for (j, item) in enumerate(row):
+                self.assertEqual(features[i][j], item, 'at [%d, %d]' % (i, j))
 
 
 if __name__ == '__main__':

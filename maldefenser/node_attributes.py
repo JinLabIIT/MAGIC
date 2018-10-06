@@ -5,10 +5,10 @@ import glog as log
 from typing import List
 
 
-transfer = ['enter', 'leave', 'jcxz', 'iret', 'ja', 'jb', 'jbe',
+transfer = ['enter', 'leave', 'jcxz', 'ja', 'jb', 'jbe',
             'jcxz', 'jecxz', 'jg', 'jge', 'jl', 'jle', 'jmp', 'jnb',
             'jno', 'jnp', 'jns', 'jnz', 'jo', 'jp', 'js', 'jz', 'loop',
-            'loope', 'loopne', 'rep', 'repe', 'repne', 'retf', 'retn', 'wait']
+            'loope', 'loopne', 'rep', 'repe', 'repne', 'wait']
 
 call = ['VxDCall', 'call', 'int', 'into']
 
@@ -17,7 +17,11 @@ mov = ['cmovb', 'cmovno', 'cmovz', 'fcmovb', 'fcmovne', 'fcmovu',
        'movhlps', 'movhps', 'movlhps', 'movlpd', 'movlps', 'movntdq',
        'movntps', 'movntq', 'movq', 'movsb', 'movsd', 'movsldup',
        'movss', 'movsw', 'movsx', 'movups', 'movzx', 'pmovmskb']
-
+terminate = ['end',
+             'iret', 'iretw',
+             'retf', 'reti', 'retfw', 'retn', 'retnw',
+             'sysexit', 'sysret',
+             'xabort']
 conversion = ['punpckldq', 'cbw', 'cdq',
               'cvtdq2pd', 'cvtdq2ps', 'cvtpi2ps', 'cvtsd2si',
               'cvtsi2sd', 'cvtsi2ss', 'cvttps2pi', 'cvttsd2si',
@@ -80,23 +84,26 @@ def classifyOperand(operand: str) -> int:
         log.info(f'{operand} belong to transfer')
         return 0
     elif operand in call:
-        log.info(f'{operand} belong to transfer')
+        log.info(f'{operand} belong to call')
         return 1
     elif operand in arithemtic:
-        log.info(f'{operand} belong to transfer')
+        log.info(f'{operand} belong to arithemtic')
         return 2
     elif operand in compare:
-        log.info(f'{operand} belong to transfer')
+        log.info(f'{operand} belong to compare')
         return 3
     elif operand in crypto:
-        log.info(f'{operand} belong to transfer')
+        log.info(f'{operand} belong to crypto')
         return 4
     elif operand in mov:
-        log.info(f'{operand} belong to transfer')
+        log.info(f'{operand} belong to move')
         return 5
+    elif operand in terminate:
+        log.info(f'{operand} belong to terminate')
+        return 6
     else:
         log.error(f'Unable to classify "{operand}"')
-        return 6
+        return 7
 
 
 def matchConstant(line: str) -> List[int]:
@@ -142,9 +149,11 @@ def nodeFeatures(G: nx.DiGraph):
     Extract features in each node:
     7 operator features + 2 operand features.
     """
-    features = np.zeros((G.number_of_nodes(), 7 + 2))
+    log.info('Extract attributes from blocks')
+    features = np.zeros((G.number_of_nodes(), 8 + 2))
     for (i, (node, attributes)) in enumerate(G.nodes(data=True)):
         block = attributes['block']
+        log.debug(f'Process block {block.startAddr}')
         for inst in block.instList:
             operator_class = classifyOperand(inst.operand)
             features[i, operator_class] += 1

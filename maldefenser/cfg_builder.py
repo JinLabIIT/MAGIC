@@ -373,7 +373,7 @@ class ControlFlowGraphBuilder(object):
     def exportToNxGraph(self):
         """Assume block/node is represented by its startAddr"""
         log.info('**** Export to networkx-compatible graph ****')
-        for (addr, block) in self.addr2Block.items():
+        for (addr, block) in sorted(self.addr2Block.items()):
             self.cfg.add_node('%08X' % addr, block=block)
 
         for (addr, block) in self.addr2Block.items():
