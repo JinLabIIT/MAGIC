@@ -44,7 +44,9 @@ class Instruction(object):
         return None
 
     def getOperandFeatures(self) -> List[int]:
-        return [0] * len(Instruction.operandTypes)
+        features = [0] * len(Instruction.operandTypes)
+        features[Instruction.operandTypes['other']] += 1
+        return features
 
     def getOperatorFeatures(self) -> List[int]:
         features = [0] * len(Instruction.operatorTypes)
@@ -85,6 +87,19 @@ class RegularInst(Instruction):
 
     def accept(self, builder):
         builder.visitDefault(self)
+
+    def getOperandFeatures(self) -> List[int]:
+        features = [0] * len(Instruction.operandTypes)
+        if self.operand in MathInstDict:
+            features[Instruction.operandTypes['math']] += 1
+        elif self.operand in CmpInstDict:
+            features[Instruction.operandTypes['cmp']] += 1
+        elif self.operand in MovInstDict:
+            features[Instruction.operandTypes['mov']] += 1
+        else:
+            features[Instruction.operandTypes['other']] += 1
+
+        return features
 
 
 class CallingInst(Instruction):
@@ -167,10 +182,8 @@ class RepeatInst(Instruction):
         features = [0] * len(Instruction.operandTypes)
         features[Instruction.operandTypes['trans']] += 1
         nestedInstStr = " ".join(['00000000'] + self.operators)
-        print(nestedInstStr)
         nestedInst = InstBuilder().createInst(nestedInstStr)
         nestedFeatures = nestedInst.getOperandFeatures()
-
         return [x + y for (x, y) in zip(features, nestedFeatures)]
 
 
@@ -211,6 +224,7 @@ class InstBuilder(object):
         # Handle data declaration seperately
         instPattern = re.compile('^[a-z]+$')
         if instPattern.match(operand) is None:
+            log.debug(f'Create data def inst from {progLine.rstrip()}')
             return DataInst(address, [operand] + operators)
 
         self.seenInst.add(operand)
@@ -226,5 +240,9 @@ class InstBuilder(object):
             return RepeatInst(address, operand, operators)
         elif operand in RegularInstDict:
             return RegularInst(address, operand, operators)
+        elif operand in DataInstDict:
+            log.debug(f'Create data def inst from {progLine.rstrip()}')
+            return DataInst(address, operators)
         else:
+            log.error(f'Unable to convert "{progLine.rstrip()}" to instruction')
             return Instruction(address)

@@ -77,7 +77,6 @@ class ControlFlowGraphBuilder(object):
         """Second pass on blocks"""
         self.visitInsts()
         self.connectBlocks()
-        self.exportToNxGraph()
 
     def addrInCodeSegment(self, seg: str) -> str:
         segNames = ['.text:', 'CODE:', 'UPX1:', 'seg000:', 'qmoyiu:',
@@ -362,7 +361,7 @@ class ControlFlowGraphBuilder(object):
     def connectBlocks(self) -> None:
         """
         Group instructions into blocks, and
-        connected based on branch and fall through
+        connected based on branch and fall through.
         """
         log.info('**** Create and connect blocks ****')
         currBlock = None
@@ -381,11 +380,15 @@ class ControlFlowGraphBuilder(object):
 
             if inst.branchTo is not None:
                 block = self.getBlockAtAddr(inst.branchTo)
-                currBlock.edgeList.append(block.startAddr)
+                if block.startAddr not in currBlock.edgeList:
+                    currBlock.edgeList.append(block.startAddr)
+
                 addr1, addr2 = currBlock.startAddr, block.startAddr
                 log.debug(f'Block {addr1:x} branches to {addr2:x}')
                 if inst.call is True:
-                    block.edgeList.append(currBlock.startAddr)
+                    if currBlock.startAddr not in block.edgeList:
+                        block.edgeList.append(currBlock.startAddr)
+
                     log.debug(f'Block {addr2:x} return back to {addr1:x}')
 
             currBlock.instList.append(inst)
@@ -449,7 +452,7 @@ class AcfgBuilder(object):
                              Block.getAttributesDim()))
         for (i, (node, attributes)) in enumerate(self.cfg.nodes(data=True)):
             block = attributes['block']
-            log.info(f'Process block {block.startAddr:x}')
+            log.debug(f'Process block {block.startAddr:x}')
             features[i, :] = block.getAttributes()
 
         return features
