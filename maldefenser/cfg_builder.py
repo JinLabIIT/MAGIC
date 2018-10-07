@@ -13,7 +13,8 @@ from typing import List, Dict
 
 class Block(object):
     """Block of control flow graph."""
-    instDim = len(isn.Instruction.oprandTypes) + len(isn.Instruction.operatorTypes)
+    instDim = len(isn.Instruction.operandTypes) + \
+        len(isn.Instruction.operatorTypes)
 
     def __init__(self) -> None:
         super(Block, self).__init__()

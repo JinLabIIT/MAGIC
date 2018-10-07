@@ -1,170 +1,20 @@
 #!/usr/bin/python3.7
 import re
 import glog as log
+from instructions_data import *
 from typing import List
 from utils import findAddrInOperators, matchConstant
-
-
-DataInstList = ['dd', 'db', 'dw', 'dq',
-                'extrn',
-                'unicode',]
-DataInstDict = {k: v for v, k in enumerate(DataInstList)}
-CallingInstList = ['call',
-                   'int', 'into',
-                   'syscall', 'sysenter',]
-CallingInstDict = {k: v for v, k in enumerate(CallingInstList)}
-ConditionalJumpInstList = ['ja', 'jb', 'jbe', 'jcxz', 'jecxz', 'jg', 'jge',
-                           'jl', 'jle', 'jnb', 'jno', 'jnp', 'jns', 'jnz',
-                           'jo', 'jp', 'js', 'jz',
-                           'loop', 'loope', 'loopne', 'loopw',
-                           'loopwe', 'loopwne',]
-ConditionalJumpInstDict = {k: v for v, k in
-                           enumerate(ConditionalJumpInstList)}
-UnconditionalJumpInstList = ['jmp']
-UnconditionalJumpInstDict = {k: v for v, k in
-                             enumerate(UnconditionalJumpInstList)}
-EndHereInstList = ['end',
-                   'iret', 'iretw',
-                   'retf', 'reti', 'retfw', 'retn', 'retnw',
-                   'sysexit', 'sysret',
-                   'xabort',
-                   ]
-EndHereInstDict = {k: v for v, k in enumerate(EndHereInstList)}
-RepeatInstList = ['rep', 'repe', 'repne']
-RepeatInstDict = {k: v for v, k in enumerate(RepeatInstList)}
-RegularInstList = ['aaa', 'aad', 'aam', 'aas', 'adc', 'add', 'addpd',
-                   'addps', 'addsd', 'addss', 'addsubpd', 'addsubps',
-                   'align', 'and', 'andnpd', 'andnps', 'andpd',
-                   'andps', 'arpl',
-                   'bound', 'bsf', 'bsr', 'bswap', 'bt', 'btc',
-                   'btr', 'bts',
-                   'cbw', 'cdq', 'clc', 'cld', 'clflush', 'cli', 'clts',
-                   'cmc', 'cmova', 'cmovb', 'cmovbe', 'cmovg', 'cmovge',
-                   'cmovl', 'cmovle', 'cmovnb', 'cmovno', 'cmovnp',
-                   'cmovns', 'cmovnz', 'cmovo', 'cmovp', 'cmovs', 'cmovz',
-                   'cmp', 'cmpeqps', 'cmpeqsd', 'cmpeqss', 'cmpleps',
-                   'cmplesd', 'cmpltpd', 'cmpltps', 'cmpltsd', 'cmpneqpd',
-                   'cmpneqps', 'cmpnlepd', 'cmpnlesd', 'cmpps', 'cmps',
-                   'cmpsb', 'cmpsd', 'cmpsw', 'cmpxchg', 'comisd',
-                   'comiss', 'cpuid', 'cwd', 'cwde',
-                   'daa', 'das', 'dec', 'div', 'divps', 'divsd', 'divss',
-                   'emms', 'enter', 'enterw', 'extractps',
-                   'fabs', 'fadd', 'faddp', 'fbld', 'fbstp', 'fchs',
-                   'fclex', 'fcmovb', 'fcmovbe', 'fcmove', 'fcmovnb',
-                   'fcmovnbe', 'fcmovne', 'fcmovnu', 'fcmovu', 'fcom',
-                   'fcomi', 'fcomip', 'fcomp', 'fcompp', 'fcos',
-                   'fdecstp', 'fdiv', 'fdivp',
-                   'fdivr', 'fdivrp', 'femms', 'ffree', 'ffreep', 'fiadd',
-                   'ficom', 'ficomp', 'fidiv', 'fidivr', 'fild', 'fimul',
-                   'fincstp', 'fist', 'fistp', 'fisttp', 'fisub', 'fisubr',
-                   'fld', 'fldcw', 'fldenv', 'fldpi', 'fldz', 'fmul',
-                   'fmulp', 'fnclex', 'fndisi','fneni', 'fninit', 'fnop',
-                   'fnsave', 'fnstcw', 'fnstenv', 'fnstsw', 'fpatan',
-                   'fprem', 'fptan', 'frndint', 'frstor', 'fsave',
-                   'fscale', 'fsetpm', 'fsin', 'fsincos', 'fsqrt', 'fst',
-                   'fstcw', 'fstenv', 'fstp', 'fstsw', 'fsub', 'fsubp',
-                   'fsubr', 'fsubrp', 'ftst', 'fucom', 'fucomi',
-                   'fucomip', 'fucomp', 'fucompp', 'fxam', 'fxch',
-                   'fxsave', 'fxtract',
-                   'getsec',
-                   'hlt', 'hnt', 'ht',
-                   'icebp', 'idiv', 'imul', 'in', 'inc', 'ins', 'insb',
-                   'insd', 'insertps', 'insw', 'invd',
-                   'lahf', 'lar', 'lddqu', 'ldmxcsr', 'lds', 'lea',
-                   'leave', 'leavew', 'les', 'lfence', 'lfs', 'lgdt',
-                   'lgs', 'lidt', 'lldt', 'lock', 'lods', 'lodsb',
-                   'lodsd', 'lodsw', 'lsl', 'lss',
-                   'maskmovq', 'maxps', 'maxss', 'minps', 'minsd', 'minss',
-                   'mov', 'movapd', 'movaps', 'movd', 'movdqa', 'movdqu',
-                   'movhlps', 'movhpd', 'movhps', 'movlhps', 'movlpd',
-                   'movlps', 'movmskpd', 'movmskps', 'movntdq', 'movnti',
-                   'movntps', 'movntq', 'movq', 'movs', 'movsb', 'movsd',
-                   'movss', 'movsw', 'movsx', 'movups', 'movzx', 'mpsadbw',
-                   'mul', 'mulpd', 'mulps', 'mulsd', 'mulss',
-                   'neg', 'nop', 'not',
-                   'or', 'orpd', 'orps', 'out', 'outs',
-                   'outsb', 'outsd', 'outsw',
-                   'pabsw', 'packssdw', 'packsswb', 'packusdw',
-                   'packuswb', 'paddb', 'paddd', 'paddq', 'paddsb',
-                   'paddsw', 'paddusb', 'paddusw', 'paddw', 'palignr',
-                   'pand', 'pandn', 'pause', 'pavgb', 'pavgusb', 'pavgw',
-                   'pblendvb', 'pcmpeqb', 'pcmpeqd', 'pcmpeqw', 'pcmpgtb',
-                   'pcmpgtd', 'pcmpgtw', 'pextrb', 'pextrd', 'pextrw',
-                   'pfacc', 'pfadd', 'pfcmpeq', 'pfcmpge', 'pfcmpgt',
-                   'pfmax', 'pfmin', 'pfmul', 'pfnacc', 'pfpnacc',
-                   'pfrcp', 'pfrsqrt', 'pfsub', 'pfsubr', 'phaddd',
-                   'phaddw', 'phminposuw', 'phsubd', 'pinsrd',
-                   'pinsrw', 'pmaddubsw', 'pmaddwd', 'pmaxsw', 'pmaxub',
-                   'pminsw', 'pminub', 'pminud', 'pminuw', 'pmovmskb',
-                   'pmovzxbd', 'pmovzxwd', 'pmulhrsw', 'pmulhuw', 'pmulhw',
-                   'pmullw', 'pmuludq', 'pop', 'popa', 'popaw', 'popf',
-                   'popfw', 'por', 'pqit', 'prefetch', 'prefetchnta',
-                   'prefetchw', 'psadbw', 'pshufb', 'pshufd', 'pshufhw',
-                   'pshuflw', 'pshufw', 'psignw', 'pslld', 'pslldq',
-                   'psllq', 'psllw', 'psrad', 'psraw','psrld', 'psrldq',
-                   'psrlq', 'psrlw', 'psubb', 'psubd', 'psubq', 'psubsb',
-                   'psubsw', 'psubusb', 'psubusw', 'psubw', 'pswapd',
-                   'ptest', 'punpckhbw', 'punpckhdq', 'punpckhqdq',
-                   'punpckhwd', 'punpcklbw', 'punpckldq', 'punpcklqdq',
-                   'punpcklwd', 'push', 'pusha', 'pushaw',
-                   'pushf', 'pushfw', 'pxor',
-                   'rc', 'rcl', 'rcpps', 'rcpss', 'rcr', 'rdmsr', 'rdpmc',
-                   'rdrand', 'rdtsc', 'rol', 'ror', 'roundps', 'rsldt',
-                   'rsm', 'rsqrtps', 'rsqrtss', 'rsts',
-                   'sahf', 'sal', 'sar', 'sbb', 'scas', 'scasb', 'scasd',
-                   'scasw', 'setalc', 'setb', 'setbe', 'setl', 'setle',
-                   'setnb', 'setnbe', 'setnl', 'setnle', 'setno', 'setnp',
-                   'setns', 'setnz', 'seto', 'setp', 'sets', 'setz',
-                   'sfence', 'sgdt', 'shl', 'shld', 'shr', 'shrd',
-                   'shufpd', 'shufps', 'sidt', 'sldt', 'sqrtps',
-                   'sqrtsd', 'sqrtss', 'stc', 'std', 'sti',
-                   'stmxcsr', 'stos', 'stosb', 'stosd',
-                   'stosw', 'str', 'sub', 'subpd', 'subps', 'subsd',
-                   'subss', 'svldt', 'svts',
-                   'test',
-                   'ucomisd','ucomiss', 'unpckhpd', 'unpckhps',
-                   'unpcklpd', 'unpcklps',
-                   'vaddps', 'vaddsd', 'vaddss', 'vaddsubpd', 'vandnpd',
-                   'vcmppd', 'vcmpps', 'vcmpss', 'vcomisd', 'vdivpd',
-                   'vdivps', 'vdivsd', 'vdivss', 'verw', 'vhsubpd',
-                   'vhsubps', 'vmaxpd', 'vmaxsd', 'vmaxss', 'vminsd',
-                   'vminss', 'vmload', 'vmovapd', 'vmovaps', 'vmovd',
-                   'vmovddup', 'vmovdqa', 'vmovdqu', 'vmovhps', 'vmovlhps',
-                   'vmovntdq', 'vmovntpd', 'vmovntps', 'vmovntsd',
-                   'vmovsd', 'vmovsldup', 'vmovss', 'vmovupd', 'vmovups',
-                   'vmptrld', 'vmptrst', 'vmread', 'vmulps', 'vmulss',
-                   'vmwrite', 'vorpd','vpackssdw', 'vpacksswb',
-                   'vpackuswb', 'vpaddb', 'vpaddd', 'vpaddq',
-                   'vpaddsb', 'vpaddsw',
-                   'vpaddusb', 'vpaddusw', 'vpaddw', 'vpandn', 'vpcext',
-                   'vpclmulqdq', 'vpcmpeqb', 'vpcmpeqd',
-                   'vpcmpeqw', 'vpcmpgtb', 'vpcmpgtd', 'vpcmpgtw',
-                   'vpermilps', 'vpermq',
-                   'vpextrw', 'vpinsrw', 'vpmaddwd', 'vpmaxub', 'vpmulhuw',
-                   'vpmulhw', 'vpmullw', 'vpsadbw', 'vpshufhw', 'vpshuflw',
-                   'vpsllq', 'vpsllw', 'vpsrad', 'vpsrld', 'vpsrlq',
-                   'vpsrlw', 'vpsubb', 'vpsubd', 'vpsubusb', 'vpunpckhbw',
-                   'vpunpckhdq', 'vpunpckhqdq', 'vpunpckhwd', 'vpunpcklbw',
-                   'vpunpckldq', 'vpunpcklqdq', 'vpunpcklwd', 'vpxor',
-                   'vrcpss', 'vrsqrtss', 'vshufpd', 'vshufps', 'vsqrtpd',
-                   'vsqrtps', 'vsqrtsd', 'vsubpd', 'vsubps', 'vsubsd',
-                   'vucomiss', 'vunpckhps', 'vunpcklpd', 'vunpcklps',
-                   'vxorps', 'vzeroupper',
-                   'wait', 'wbinvd', 'wrmsr',
-                   'xadd', 'xbegin', 'xchg', 'xlat', 'xor',
-                   'xorpd', 'xorps', 'xrstor', 'xsaveopt']
-RegularInstDict = {k: v for v, k in enumerate(RegularInstList)}
 
 
 class Instruction(object):
     """Abstract assembly instruction, used as default for unknown ones"""
 
-    # Type of instruction, including
-    # [trans, call, math, cmp, crypto, mov, term, def, other]
-    oprandTypes = ['trans', 'call', 'math', 'cmp',
-                   'crypto', 'mov', 'term', 'def',
-                   'other']
-    operatorTypes = ['num_const', 'str_cont']
+    # Type of instruction, mapped to feature vector index.
+    operandTypes = {'trans': 0, 'call': 1, 'math': 2, 'cmp': 3,
+                    'crypto': 4, 'mov': 5, 'term': 6, 'def': 7,
+                    'other': 8}
+    # Type of const values in operator, mapped to feature vector index.
+    operatorTypes = {'num_const': 9, 'str_cont': 10}
 
     def __init__(self, addr: str,
                  operand: str = '',
@@ -194,7 +44,7 @@ class Instruction(object):
         return None
 
     def getOperandFeatures(self) -> List[int]:
-        return [0] * len(Instruction.oprandTypes)
+        return [0] * len(Instruction.operandTypes)
 
     def getOperatorFeatures(self) -> List[int]:
         features = [0] * len(Instruction.operatorTypes)
@@ -206,7 +56,8 @@ class Instruction(object):
         return features
 
     def __repr__(self) -> str:
-        return "%X: %s" % (self.address, self.operand)
+        operators = " ".join(self.operators)
+        return "%X: %s %s" % (self.address, self.operand, operators)
 
 
 class DataInst(Instruction):
@@ -218,9 +69,10 @@ class DataInst(Instruction):
     def accept(self, builder):
         builder.visitDefault(self)
 
-    def __repr__(self) -> str:
-        operators = " ".join(self.operators)
-        return "%X: %s %s" % (self.address, self.operand, operators)
+    def getOperandFeatures(self) -> List[int]:
+        features = [0] * len(Instruction.operandTypes)
+        features[Instruction.operandTypes['def']] += 1
+        return features
 
 
 class RegularInst(Instruction):
@@ -234,9 +86,6 @@ class RegularInst(Instruction):
     def accept(self, builder):
         builder.visitDefault(self)
 
-    def __repr__(self) -> str:
-        operators = " ".join(self.operators)
-        return "%X: %s %s" % (self.address, self.operand, operators)
 
 class CallingInst(Instruction):
     """Calling"""
@@ -252,9 +101,11 @@ class CallingInst(Instruction):
     def findAddrInInst(self):
         return findAddrInOperators(self.operators)
 
-    def __repr__(self) -> str:
-        operators = " ".join(self.operators)
-        return "%X: %s %s" % (self.address, self.operand, operators)
+    def getOperandFeatures(self) -> List[int]:
+        features = [0] * len(Instruction.operandTypes)
+        features[Instruction.operandTypes['call']] += 1
+        return features
+
 
 class ConditionalJumpInst(Instruction):
     """ConditionalJump"""
@@ -270,9 +121,11 @@ class ConditionalJumpInst(Instruction):
     def findAddrInInst(self):
         return findAddrInOperators(self.operators)
 
-    def __repr__(self) -> str:
-        operators = " ".join(self.operators)
-        return "%X: %s %s" % (self.address, self.operand, operators)
+    def getOperandFeatures(self) -> List[int]:
+        features = [0] * len(Instruction.operandTypes)
+        features[Instruction.operandTypes['trans']] += 1
+        return features
+
 
 class UnconditionalJumpInst(Instruction):
     """UnconditionalJump"""
@@ -290,9 +143,10 @@ class UnconditionalJumpInst(Instruction):
     def findAddrInInst(self):
         return findAddrInOperators(self.operators)
 
-    def __repr__(self) -> str:
-        operators = " ".join(self.operators)
-        return "%X: %s %s" % (self.address, self.operand, operators)
+    def getOperandFeatures(self) -> List[int]:
+        features = [0] * len(Instruction.operandTypes)
+        features[Instruction.operandTypes['trans']] += 1
+        return features
 
 
 class RepeatInst(Instruction):
@@ -309,9 +163,16 @@ class RepeatInst(Instruction):
     def findAddrInInst(self):
         return self.address
 
-    def __repr__(self) -> str:
-        operators = " ".join(self.operators)
-        return "%X: %s %s" % (self.address, self.operand, operators)
+    def getOperandFeatures(self) -> List[int]:
+        features = [0] * len(Instruction.operandTypes)
+        features[Instruction.operandTypes['trans']] += 1
+        nestedInstStr = " ".join(['00000000'] + self.operators)
+        print(nestedInstStr)
+        nestedInst = InstBuilder().createInst(nestedInstStr)
+        nestedFeatures = nestedInst.getOperandFeatures()
+
+        return [x + y for (x, y) in zip(features, nestedFeatures)]
+
 
 class EndHereInst(Instruction):
     """EndHere"""
@@ -324,9 +185,11 @@ class EndHereInst(Instruction):
     def accept(self, builder):
         builder.visitEndHere(self)
 
-    def __repr__(self) -> str:
-        operators = " ".join(self.operators)
-        return "%X: %s %s" % (self.address, self.operand, operators)
+    def getOperandFeatures(self) -> List[int]:
+        features = [0] * len(Instruction.operandTypes)
+        features[Instruction.operandTypes['term']] += 1
+        return features
+
 
 class InstBuilder(object):
     """Create instructions based on string content"""
@@ -338,7 +201,7 @@ class InstBuilder(object):
     def createInst(self, progLine: str) -> Instruction:
         elems = progLine.rstrip('\n').split(' ')
         address = elems[0]
-        if len(elems) > 2 and elems[2] in DataInstList:
+        if len(elems) > 2 and elems[2] in DataInstDict:
             elems[1], elems[2] = elems[2], elems[1]
 
         operand = elems[1]
