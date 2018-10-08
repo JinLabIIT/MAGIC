@@ -67,6 +67,16 @@ def addCodeSegLog(binaryId) -> None:
         errFile.write('%s\n' % binaryId)
 
 
+def getBinaryIds(pathPrefix: str) -> List[str]:
+    binaryIds = []
+    for path in glob.glob(pathPrefix + '/*.asm', recursive=False):
+        filename = path.split('/')[-1]
+        id = filename.split('.')[0]
+        binaryIds.append(id)
+
+    return binaryIds
+
+
 def matchConstant(line: str) -> List[int]:
     """Parse the numeric/string constants in an operand"""
     operand = line.strip('\n\r\t ')

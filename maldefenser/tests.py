@@ -2,7 +2,7 @@ import glog as log
 import numpy as np
 import unittest
 from cfg_builder import ControlFlowGraphBuilder, AcfgBuilder
-from data_provider import DataProvider
+from acfg_pipeline import AcfgWorker
 from utils import delCodeSegLog, evalHexAddSubExpr
 
 
@@ -167,7 +167,7 @@ class TestCfgBuildedr(unittest.TestCase):
                 self.assertEqual(features[i][j], item, 'at [%d, %d]' % (i, j))
 
 
-class TestDataProvider(unittest.TestCase):
+class TestAcfgPipeline(unittest.TestCase):
     @unittest.skip("Uncomment to run")
     def testDiscoverInstDict(self):
         pathPrefix = '../TrainSet'
@@ -177,21 +177,28 @@ class TestDataProvider(unittest.TestCase):
             'cqdUoQDaZfGkt5ilBe7n',
             'BKpbxgMPWUNZosdnO8Ak',
         ]
-        dataProvider = DataProvider(pathPrefix)
-        dataProvider.discoverInstDictionary(binaryIds, 'ut_seen_inst')
+        worker = AcfgWorker(pathPrefix, binaryIds)
+        worker.discoverInstDictionary('ut_seen_inst')
 
     # @unittest.skip("Uncomment to run")
-    def testStoreMatrix(self):
+    def testWorkerRun(self):
         pathPrefix = '../TrainSet'
         labelPath = '../trainLabels.csv'
-        binaryIds = [
+        binaryIds1 = [
             'exGy3iaKJmRprdHcB0NO',
             '0Q4ALVSRnlHUBjyOb1sw',
+        ]
+        binaryIds2 = [
             'cqdUoQDaZfGkt5ilBe7n',
             'BKpbxgMPWUNZosdnO8Ak',
         ]
-        dataProvider = DataProvider(pathPrefix, labelPath)
-        dataProvider.storeMatrices(binaryIds)
+        worker1 = AcfgWorker(pathPrefix, binaryIds1, labelPath)
+        worker1.start()
+        worker2 = AcfgWorker(pathPrefix, binaryIds2, labelPath)
+        worker2.start()
+        
+        worker1.join()
+        worker2.join()
 
 
 if __name__ == '__main__':
