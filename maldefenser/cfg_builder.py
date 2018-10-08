@@ -192,6 +192,9 @@ class ControlFlowGraphBuilder(object):
             if inst.startswith('db ') or inst.find(' db ') != -1:
                 foundDataDeclare += inst + ' '
                 continue
+            if inst.startswith('unicode '):
+                foundDataDeclare += inst + ' '
+                continue
             if inst.endswith(':'):
                 continue
             validInst.append(inst)
@@ -208,7 +211,7 @@ class ControlFlowGraphBuilder(object):
             progLine = ''
             for inst in validInst:
                 progLine += inst.rstrip('\n\\') + ' '
-                log.error('%s: %s' % (addr, inst))
+                log.warning('%s: %s' % (addr, inst))
 
             log.warning(f'Concat to: {progLine}')
             self.program[addr] = progLine.rstrip(' ')
@@ -289,9 +292,13 @@ class ControlFlowGraphBuilder(object):
             log.debug(f'Enter software interrupt {enterAddr:x}')
             self.addAuxilaryInst(enterAddr, 'softirq_%X' % enterAddr)
         elif enterAddr not in self.addr2Inst:
-            log.error(f'Enter invalid address {enterAddr:x} from {inst}')
-            self.addAuxilaryInst(InvalidAddr, 'invalid')
-            self.addr2Inst[inst.address].branchTo = InvalidAddr
+            if inst.operand in ['call', 'syscall']:
+                log.debug(f'Enter extern callee addr from {inst}')
+                self.addAuxilaryInst(enterAddr, 'extrn_sym')
+            else:
+                log.error(f'Enter invalid address {enterAddr:x} from {inst}')
+                self.addAuxilaryInst(InvalidAddr, 'invalid')
+                self.addr2Inst[inst.address].branchTo = InvalidAddr
         else:
             log.debug(f'Enter instruction at {enterAddr:x} from {inst}')
             self.addr2Inst[enterAddr].start = True

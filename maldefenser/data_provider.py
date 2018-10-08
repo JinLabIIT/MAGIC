@@ -1,20 +1,24 @@
 #!/usr/bin/python3.7
 import pandas as pd
+import numpy as np
+import scipy as sp
 import glog as log
 import glob
 import cfg_builder
-from typing import List
+from typing import List, Dict
 from utils import delCodeSegLog
 
 
 class DataProvider(object):
-    """Handle data location stuff"""
+    """Handle data location/storage stuff"""
 
-    def __init__(self, pathPrefix: str) -> None:
+    def __init__(self, pathPrefix: str, labelPath: str = '') -> None:
         super(DataProvider, self).__init__()
         self.seenInst: set = set()
         self.pathPrefix: str = pathPrefix
+        self.labelPath: str = labelPath
         self.binaryIds: List[str] = []
+        delCodeSegLog()
 
     def getBinaryIds(self) -> List[str]:
         self.binaryIds = []
@@ -30,7 +34,7 @@ class DataProvider(object):
         df = pd.DataFrame(data=instColumn)
         df.to_csv('%s.csv' % exportTo)
 
-    def discoverInstDictionary(self, binaryIds: List[str], exportTo: str):
+    def discoverInstDictionary(self, binaryIds: List[str], exportTo: str) -> None:
         for (i, bId) in enumerate(binaryIds):
             log.info(f'Processing {i}/{len(binaryIds)} {bId}.asm')
             cfgBuilder = cfg_builder.ControlFlowGraphBuilder(bId, self.pathPrefix)
@@ -40,12 +44,31 @@ class DataProvider(object):
 
         self.exportSeenInst(exportTo)
 
+    def loadLabel(self) -> Dict[str, str]:
+        df = pd.read_csv(self.labelPath, header=0,
+                         dtype={'Id': str, 'Class': str})
+        id2Label = {k.lstrip('"').rstrip('"'): v
+                    for (k, v) in zip(df['Id'], df['Class'])}
+        return id2Label
+
+    def storeMatrices(self, binaryIds: List[str]) -> None:
+        id2Label = self.loadLabel()
+        for (i, bId) in enumerate(binaryIds):
+            if bId not in id2Label:
+                log.error(f'Unable to label program {bId}')
+                continue
+
+            acfgBuilder = cfg_builder.AcfgBuilder(bId, self.pathPrefix)
+            features, adjMatrix = acfgBuilder.getAttributedCfg()
+            filePrefix = self.pathPrefix + '/' + bId
+            np.savetxt(filePrefix + '.features.txt', features, fmt="%d")
+            np.savetxt(filePrefix + '.label.txt',
+                       np.array([id2Label[bId]]), fmt="%s")
+            sp.sparse.save_npz(filePrefix + '.adjacent', adjMatrix)
+
 
 if __name__ == '__main__':
     log.setLevel("INFO")
     pathPrefix = '../TrainSet'
-    delCodeSegLog()
-    dataProvider = DataProvider(pathPrefix)
-    binaryIds = dataProvider.getBinaryIds()
-    log.info(f'{binaryIds}')
-    dataProvider.discoverInstDictionary(binaryIds, 'seen_inst')
+    dataProvider = DataProvider(pathPrefix, '../trainLabels.csv')
+    dataProvider.storeMatrices([])

@@ -40,6 +40,12 @@ def baseAddrInExpr(expr: str) -> int:
 
 
 def findAddrInOperators(operators: List[str]) -> int:
+    """
+    Find possible address in operators.
+    For call/syscall inst, this func may return false positive address;
+    the remedy is to do a second check on if addr is invalid,
+    in which case the returned addr should be treated as FakeCalleeAddr.
+    """
     hexPattern = re.compile(r'[0-9A-Fa-f]+h?([\+\-\*\/][0-9A-Fa-f]+)?$')
     for item in operators:
         for part in item.split('_'):

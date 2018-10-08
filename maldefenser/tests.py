@@ -2,13 +2,13 @@ import glog as log
 import numpy as np
 import unittest
 from cfg_builder import ControlFlowGraphBuilder, AcfgBuilder
-from process_graphs import DataProvider
+from data_provider import DataProvider
 from utils import delCodeSegLog, evalHexAddSubExpr
 
 
 class TestCfgBuildedr(unittest.TestCase):
     @unittest.skip("Uncomment to run")
-    def test_parseInstructions(self):
+    def testParseInstructions(self):
         pathPrefix = '../TrainSet'
         binaryIds = [
             '0A32eTdBKayjCWhZqDOQ',
@@ -31,7 +31,7 @@ class TestCfgBuildedr(unittest.TestCase):
             cfgBuilder.parseInstructions()
 
     # @unittest.skip("Uncomment to run")
-    def test_buildSingle(self):
+    def testBuildControlFlowGraph(self):
         pathPrefix = '../DataSamples'
         bId = 'test'
         log.info('Processing ' + pathPrefix + '/' + bId + '.asm')
@@ -84,7 +84,7 @@ class TestCfgBuildedr(unittest.TestCase):
                          '#edge in CFG != expected #edges')
 
     @unittest.skip("Uncomment to run")
-    def test_build(self):
+    def testBuildControlFlowGraphBatch(self):
         pathPrefix = '../TrainSet'
         binaryIds = [
             # '0A32eTdBKayjCWhZqDOQ',
@@ -107,7 +107,7 @@ class TestCfgBuildedr(unittest.TestCase):
             cfgBuilder.buildControlFlowGraph()
 
     @unittest.skip("Uncomment to run")
-    def test_emptyCodeSeg(self):
+    def testEmptyCodeSeg(self):
         pathPrefix = '../TrainSet'
         binaryIds = [
             'a9oIzfw03ED4lTBCt52Y',
@@ -120,19 +120,7 @@ class TestCfgBuildedr(unittest.TestCase):
             cfgBuilder.parseInstructions()
 
     @unittest.skip("Uncomment to run")
-    def test_discoverInstDict(self):
-        pathPrefix = '../TrainSet'
-        binaryIds = [
-            'exGy3iaKJmRprdHcB0NO',
-            '0Q4ALVSRnlHUBjyOb1sw',
-            'cqdUoQDaZfGkt5ilBe7n',
-            'BKpbxgMPWUNZosdnO8Ak',
-        ]
-        dataProvider = DataProvider(pathPrefix)
-        dataProvider.discoverInstDictionary(binaryIds, 'ut_seen_inst')
-
-    @unittest.skip("Uncomment to run")
-    def test_evalHexExpr(self):
+    def testEvalHexExpr(self):
         expressions = ['14769F + 48D - 48Dh - 14769Fh+ 14769F',
                        '4477DAB5F7',
                        '435C89+4',
@@ -142,7 +130,7 @@ class TestCfgBuildedr(unittest.TestCase):
             self.assertEqual(evalHexAddSubExpr(expr), expected)
 
     # @unittest.skip("Uncomment to run")
-    def test_nodeAttributes(self):
+    def testNodeAttributes(self):
         pathPrefix = '../DataSamples'
         bId = 'test'
         log.info('Processing ' + pathPrefix + '/' + bId + '.asm')
@@ -177,6 +165,33 @@ class TestCfgBuildedr(unittest.TestCase):
         for (i, row) in enumerate(expRet):
             for (j, item) in enumerate(row):
                 self.assertEqual(features[i][j], item, 'at [%d, %d]' % (i, j))
+
+
+class TestDataProvider(unittest.TestCase):
+    @unittest.skip("Uncomment to run")
+    def testDiscoverInstDict(self):
+        pathPrefix = '../TrainSet'
+        binaryIds = [
+            'exGy3iaKJmRprdHcB0NO',
+            '0Q4ALVSRnlHUBjyOb1sw',
+            'cqdUoQDaZfGkt5ilBe7n',
+            'BKpbxgMPWUNZosdnO8Ak',
+        ]
+        dataProvider = DataProvider(pathPrefix)
+        dataProvider.discoverInstDictionary(binaryIds, 'ut_seen_inst')
+
+    # @unittest.skip("Uncomment to run")
+    def testStoreMatrix(self):
+        pathPrefix = '../TrainSet'
+        labelPath = '../trainLabels.csv'
+        binaryIds = [
+            'exGy3iaKJmRprdHcB0NO',
+            '0Q4ALVSRnlHUBjyOb1sw',
+            'cqdUoQDaZfGkt5ilBe7n',
+            'BKpbxgMPWUNZosdnO8Ak',
+        ]
+        dataProvider = DataProvider(pathPrefix, labelPath)
+        dataProvider.storeMatrices(binaryIds)
 
 
 if __name__ == '__main__':
