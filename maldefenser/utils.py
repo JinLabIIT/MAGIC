@@ -67,14 +67,11 @@ def addCodeSegLog(binaryId) -> None:
         errFile.write('%s\n' % binaryId)
 
 
-def getBinaryIds(pathPrefix: str) -> List[str]:
-    binaryIds = []
-    for path in glob.glob(pathPrefix + '/*.asm', recursive=False):
-        filename = path.split('/')[-1]
-        id = filename.split('.')[0]
-        binaryIds.append(id)
-
-    return binaryIds
+def list2Str(l1, l2):
+    """
+    Merge two list, then return space seperated string format.
+    """
+    return " ".join([str(x) for x in (list(l1) + list(l2))])
 
 
 def matchConstant(line: str) -> List[int]:

@@ -2,7 +2,7 @@ import glog as log
 import numpy as np
 import unittest
 from cfg_builder import ControlFlowGraphBuilder, AcfgBuilder
-from acfg_pipeline import AcfgWorker
+from acfg_pipeline import AcfgWorker, AcfgMaster
 from utils import delCodeSegLog, evalHexAddSubExpr
 
 
@@ -180,7 +180,7 @@ class TestAcfgPipeline(unittest.TestCase):
         worker = AcfgWorker(pathPrefix, binaryIds)
         worker.discoverInstDictionary('ut_seen_inst')
 
-    # @unittest.skip("Uncomment to run")
+    @unittest.skip("Uncomment to run")
     def testWorkerRun(self):
         pathPrefix = '../TrainSet'
         labelPath = '../trainLabels.csv'
@@ -196,9 +196,21 @@ class TestAcfgPipeline(unittest.TestCase):
         worker1.start()
         worker2 = AcfgWorker(pathPrefix, binaryIds2, labelPath)
         worker2.start()
-        
+
         worker1.join()
         worker2.join()
+
+    def testMasterDispatch(self):
+        pathPrefix = '../TrainSet'
+        labelPath = '../trainLabels.csv'
+        binaryIds = [
+            'exGy3iaKJmRprdHcB0NO',
+            '0Q4ALVSRnlHUBjyOb1sw',
+            'cqdUoQDaZfGkt5ilBe7n',
+            'BKpbxgMPWUNZosdnO8Ak',
+        ]
+        master = AcfgMaster(pathPrefix, labelPath, binaryIds)
+        master.dispatchWorkers(2)
 
 
 if __name__ == '__main__':

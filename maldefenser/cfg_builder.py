@@ -207,13 +207,13 @@ class ControlFlowGraphBuilder(object):
             log.debug('Convert all data declare into unified inst')
         else:
             # Concat unaggregatable insts
-            log.warning(f'Unable to aggregate instructions at {addr}')
+            log.debug(f'Unable to aggregate instructions at {addr}')
             progLine = ''
             for inst in validInst:
                 progLine += inst.rstrip('\n\\') + ' '
-                log.warning('%s: %s' % (addr, inst))
+                log.debug('%s: %s' % (addr, inst))
 
-            log.warning(f'Concat to: {progLine}')
+            log.debug(f'Concat to: {progLine}')
             self.program[addr] = progLine.rstrip(' ')
 
     def createProgram(self) -> None:
