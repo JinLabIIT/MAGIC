@@ -224,7 +224,7 @@ class InstBuilder(object):
         # Handle data declaration seperately
         instPattern = re.compile('^[a-z]+$')
         if instPattern.match(operand) is None:
-            log.debug(f'Create data def inst from {progLine.rstrip()}')
+            log.debug(f'[InstBuilder] Create DataDef from {progLine.rstrip()}')
             return DataInst(address, [operand] + operators)
 
         self.seenInst.add(operand)
@@ -241,8 +241,8 @@ class InstBuilder(object):
         elif operand in RegularInstDict:
             return RegularInst(address, operand, operators)
         elif operand in DataInstDict:
-            log.debug(f'Create data def inst from {progLine.rstrip()}')
+            log.debug(f'[InstBuilder] Create DataDef from {progLine.rstrip()}')
             return DataInst(address, operators)
         else:
-            log.error(f'Unable to convert "{progLine.rstrip()}" to instruction')
+            log.error(f'[InstBuilder] Failed converting "{progLine.rstrip()}"')
             return Instruction(address)

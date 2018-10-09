@@ -50,10 +50,10 @@ def findAddrInOperators(operators: List[str]) -> int:
     for item in operators:
         for part in item.split('_'):
             if hexPattern.match(part) is not None:
-                log.debug(f'Convert "{part}" in {operators} to hex')
+                log.debug(f'[FindAddr] Convert "{part}" in {operators} to hex')
                 return baseAddrInExpr(part)
 
-    log.debug(f'"{operators}" is NOT convertiable to hex int')
+    log.debug(f'[FindAddr] "{operators}" NOT convertiable to hex')
     return FakeCalleeAddr
 
 
@@ -87,7 +87,7 @@ def matchConstant(line: str) -> List[int]:
     pattern = re.compile(wholeNum)
     if pattern.match(operand):
         numericCnts += 1
-        log.debug(f'Match whole number in {operand}')
+        log.debug(f'[MatchConst] Match whole number in {operand}')
         # numerics.append('%s:WHOLE/LEAD' % operand)
     """Number inside expression, exclude the leading one."""
     numInExpr = r'([+*/:]|-)([1-9][0-9A-F]*|0[A-F][0-9A-F]*)h?'
@@ -95,7 +95,7 @@ def matchConstant(line: str) -> List[int]:
     match = pattern.findall(operand)
     if len(match) > 0:
         numericCnts += 1
-        log.debug(f'Match in-expression number in {operand}')
+        log.debug(f'[MatchConst] Match in-expression number in {operand}')
         # numerics.append('%s:%d' % (operand, len(match)))
     """Const string inside double/single quote"""
     strRe = r'["\'][^"]+["\']'
@@ -103,7 +103,7 @@ def matchConstant(line: str) -> List[int]:
     match = pattern.findall(operand)
     if len(match) > 0:
         stringCnts += 1
-        log.debug(f'Match str const in {operand}')
+        log.debug(f'[MatchConst] Match str const in {operand}')
         # strings.append('%s:%d' % (operand, len(match)))
 
     return [numericCnts, stringCnts]

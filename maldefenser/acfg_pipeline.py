@@ -4,6 +4,7 @@ import numpy as np
 import scipy as sp
 import glog as log
 import glob
+import os
 import cfg_builder
 import threading
 from typing import List, Dict
@@ -28,18 +29,22 @@ class AcfgWorker(threading.Thread):
         df.to_csv('%s.csv' % exportTo)
 
     def discoverInstDictionary(self, exportTo: str) -> None:
+        idCnt = len(self.binaryIds)
         for (i, bId) in enumerate(self.binaryIds):
-            log.info(f'Processing {i}/{len(self.binaryIds)} {bId}.asm')
-            cfgBuilder = cfg_builder.ControlFlowGraphBuilder(bId, self.pathPrefix)
+            log.info(f'[DiscoverInstDict] Processing {i}/{idCnt} {bId}.asm')
+            cfgBuilder = cfg_builder.ControlFlowGraphBuilder(bId,
+                                                             self.pathPrefix)
             cfgBuilder.parseInstructions()
-            log.debug(f'{len(cfgBuilder.instBuilder.seenInst)} unique insts in {bId}.asm')
+            instCnt = len(cfgBuilder.instBuilder.seenInst)
+            log.debug(f'[DiscoverInstDict] Found {instCnt} unique insts')
             self.seenInst = self.seenInst.union(cfgBuilder.instBuilder.seenInst)
 
         self.exportSeenInst(exportTo)
 
     def run(self) -> None:
+        idCnt = len(self.binaryIds)
         for (i, bId) in enumerate(self.binaryIds):
-            log.info(f'{self.name} is processing {i + 1}th/{len(self.binaryIds)} ACFG')
+            log.info(f'[{self.name}] Processing {i + 1}th/{idCnt} binary')
             if bId not in self.id2Label:
                 log.error(f'Unable to label program {bId}')
                 continue
@@ -52,7 +57,7 @@ class AcfgWorker(threading.Thread):
                        np.array([self.id2Label[bId]]), fmt="%s")
             sp.sparse.save_npz(filePrefix + '.adjacent', adjMatrix)
 
-        log.info(f'{self.name} processed {len(self.binaryIds)} ACFGs')
+        log.info(f'[{self.name}] Generated {idCnt} ACFGs')
 
 
 class AcfgMaster(object):
@@ -102,12 +107,15 @@ class AcfgMaster(object):
             worker.join()
 
         self.aggregateDgcnnFormat()
+        self.clearTmpFiles()
 
     def aggregateDgcnnFormat(self) -> None:
+        log.info(f"[AggrDgcnnFormat] Aggregate ACFGs to txt format")
+        numBinaries = len(self.binaryIds)
         output = open(self.pathPrefix + '/' + 'Acfg.txt', 'w')
-        output.write("%d\n" % len(self.binaryIds))
+        output.write("%d\n" % numBinaries)
         for (i, bId) in enumerate(self.binaryIds):
-            log.info(f"Adding {i + 1}th/{len(self.binaryIds)} ACFG to txt")
+            log.info(f"[AggrDgcnnFormat] Processing {i + 1}th/{numBinaries} ACFG")
             filePrefix = self.pathPrefix + '/' + bId
             label = np.loadtxt(filePrefix + '.label.txt',
                                dtype=int, ndmin=1)[0]
@@ -130,7 +138,16 @@ class AcfgMaster(object):
                              (len(neighbors), list2Str(neighbors, feature)))
 
         output.close()
-        log.info(f"Convert {len(self.binaryIds)} ACFGs to DGCNN txt format")
+        log.info(f"[AggrDgcnnFormat] Converted {numBinaries} ACFGs")
+
+    def clearTmpFiles(self) -> None:
+        log.info(f"[ClearTmpFiles] Remove temporary files ****")
+        for (i, bId) in enumerate(self.binaryIds):
+            filePrefix = self.pathPrefix + '/' + bId
+            for ext in ['.label.txt', '.features.txt', '.adjacent.npz']:
+                os.remove(filePrefix + ext)
+
+        log.info(f"[ClearTmpFiles] {len(self.binaryIds)} files removed ****")
 
 
 if __name__ == '__main__':

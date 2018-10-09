@@ -34,7 +34,7 @@ class TestCfgBuildedr(unittest.TestCase):
     def testBuildControlFlowGraph(self):
         pathPrefix = '../DataSamples'
         bId = 'test'
-        log.info('Processing ' + pathPrefix + '/' + bId + '.asm')
+        log.info('[Test] Build CFG from ' + pathPrefix + '/' + bId + '.asm')
         cfgBuilder = ControlFlowGraphBuilder(bId, pathPrefix)
         cfgBuilder.buildControlFlowGraph()
         cfgBuilder.exportToNxGraph()

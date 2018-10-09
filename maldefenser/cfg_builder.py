@@ -70,8 +70,8 @@ class ControlFlowGraphBuilder(object):
         """First pass on instructions"""
         self.extractTextSeg()
         self.createProgram()
-        self.discoverInsts()
-        # self.clearTmpFiles()
+        self.buildInsts()
+        self.clearTmpFiles()
 
     def parseBlocks(self) -> None:
         """Second pass on blocks"""
@@ -106,7 +106,7 @@ class ControlFlowGraphBuilder(object):
 
     def extractTextSeg(self) -> None:
         """Extract text segment from .asm file"""
-        log.info(f'**** Extract code segment from {self.binaryId}.asm ****')
+        log.info(f'[ExtractSeg] Extracting {self.binaryId}.asm ****')
         lineNum = 1
         imcompleteByte = re.compile(r'^\?\?$')
         fileInput = open(self.filePrefix + '.asm', 'rb')
@@ -122,12 +122,13 @@ class ControlFlowGraphBuilder(object):
             addr = self.addrInCodeSegment(seg)
             if addr is "NotInCodeSeg":
                 # Since text segment maynot always be the head, we cannot break
-                log.debug("Line %d is out of text segment" % lineNum)
+                log.debug(f"[ExtractSeg] Line {lineNum} out of text segment")
                 lineNum += 1
                 continue
 
             if len(decodedElems) > 0 and imcompleteByte.match(decodedElems[0]):
-                log.debug(f'Ignore imcomplete code at line {lineNum}: {" ".join(decodedElems)}')
+                lineStr = " ".join(decodedElems)
+                log.debug(f'[ExtractSeg] Ignore imcomplete L{lineNum}: {lineStr}')
                 lineNum += 1
                 continue
 
@@ -136,11 +137,11 @@ class ControlFlowGraphBuilder(object):
             if startIdx < endIdx:
                 instElems = [addr] + decodedElems[startIdx: endIdx]
                 s1, s2 = ' '.join(decodedElems), ' '.join(instElems)
-                log.debug(f"Processed line {lineNum}: '{s1}' => '{s2}'")
+                log.debug(f"[ExtractSeg] Processed L{lineNum}: '{s1}'=>'{s2}'")
                 fileOutput.write(" ".join(instElems) + '\n')
             else:
                 l = " ".join(decodedElems)
-                log.debug(f'No instruction at line {lineNum}: {l}')
+                log.debug(f'[ExtractSeg] No instruction L{lineNum}: {l}')
 
             lineNum += 1
 
@@ -202,23 +203,24 @@ class ControlFlowGraphBuilder(object):
         if len(validInst) == 1:
             progLine = validInst[0] + ' ' + foundDataDeclare
             self.program[addr] = progLine.rstrip(' ')
+            log.debug(f'[AggrInst] Aggregate succeed')
         elif len(foundDataDeclare.rstrip(' ')) > 0:
             self.program[addr] = foundDataDeclare.rstrip(' ')
-            log.debug('Convert all data declare into unified inst')
+            log.debug(f'[AggrInst] Concat all DataDef into unified inst')
         else:
             # Concat unaggregatable insts
-            log.debug(f'Unable to aggregate instructions at {addr}')
+            log.debug(f'[AggrInst] Fail aggregating insts at {addr}')
             progLine = ''
             for inst in validInst:
                 progLine += inst.rstrip('\n\\') + ' '
-                log.debug('%s: %s' % (addr, inst))
+                log.debug('[AggrInst] %s: %s' % (addr, inst))
 
-            log.debug(f'Concat to: {progLine}')
+            log.debug(f'[AggrInst] Concat to: {progLine}')
             self.program[addr] = progLine.rstrip(' ')
 
     def createProgram(self) -> None:
         """Generate unique-addressed program, store in self.program"""
-        log.info('**** Aggreate to unique-addressed instructions ****')
+        log.info('[CreateProg] Aggreate to unique-addressed instructions')
         currAddr = -1
         sameAddrInsts = []
         with open(self.filePrefix + ".text", 'r') as textFile:
@@ -241,13 +243,13 @@ class ControlFlowGraphBuilder(object):
                 sameAddrInsts.clear()
 
             if len(self.program) == 0:
-                log.error(f'No code extracted from {self.filePrefix}.asm')
+                log.error(f'[CreateProg] No code in {self.filePrefix}.asm')
 
             self.saveProgram()
 
-    def discoverInsts(self) -> None:
+    def buildInsts(self) -> None:
         """Create Instruction object for each address, store in addr2Inst"""
-        log.info('**** Discover instructions ****')
+        log.info(f'[BuildInsts] Build insts from {self.filePrefix + ".prog"}')
         prevAddr = -1
         with open(self.filePrefix + '.prog', 'r') as progFile:
             for line in progFile:
@@ -268,10 +270,11 @@ class ControlFlowGraphBuilder(object):
             else:
                 addCodeSegLog(self.binaryId)
 
-        log.info(f'Program range [{self.programStart:x}, {self.programEnd:x}]')
+        start, end = self.programStart, self.programEnd
+        log.info(f'[BuildInsts] Finish with range [{start:x}, {end:x}]')
 
     def visitInsts(self) -> None:
-        log.info('**** Visit instructions ****')
+        log.info(f'[VisitInsts] Visiting insts in {self.binaryId}')
         for addr, inst in self.addr2Inst.items():
             inst.accept(self)
 
@@ -286,28 +289,28 @@ class ControlFlowGraphBuilder(object):
 
     def enter(self, inst, enterAddr: int) -> None:
         if enterAddr == FakeCalleeAddr:
-            log.debug(f'Enter extern callee addr from {inst}')
+            log.debug(f'[Enter] extern callee addr from {inst}')
             self.addAuxilaryInst(enterAddr, 'extrn_sym')
         elif enterAddr >= 0 and enterAddr < 256:
-            log.debug(f'Enter software interrupt {enterAddr:x}')
+            log.debug(f'[Enter] software interrupt {enterAddr:x}')
             self.addAuxilaryInst(enterAddr, 'softirq_%X' % enterAddr)
         elif enterAddr not in self.addr2Inst:
             if inst.operand in ['call', 'syscall']:
-                log.debug(f'Enter extern callee addr from {inst}')
+                log.debug(f'[Enter] extern callee addr from {inst}')
                 self.addAuxilaryInst(enterAddr, 'extrn_sym')
             else:
-                log.error(f'Enter invalid address {enterAddr:x} from {inst}')
+                log.error(f'[Enter] invalid address {enterAddr:x} from {inst}')
                 self.addAuxilaryInst(InvalidAddr, 'invalid')
                 self.addr2Inst[inst.address].branchTo = InvalidAddr
         else:
-            log.debug(f'Enter instruction at {enterAddr:x} from {inst}')
+            log.debug(f'[Enter] instruction at {enterAddr:x} from {inst}')
             self.addr2Inst[enterAddr].start = True
 
     def branch(self, inst) -> None:
         """Conditional jump to another address or fall throught"""
         branchToAddr = inst.findAddrInInst()
         self.addr2Inst[inst.address].branchTo = branchToAddr
-        log.debug(f'Found branch from {inst.address:x} to {branchToAddr:x}')
+        log.debug(f'[Branch] From {inst.address:x} to {branchToAddr:x}')
         self.enter(inst, branchToAddr)
         self.enter(inst, inst.address + inst.size)
 
@@ -317,9 +320,9 @@ class ControlFlowGraphBuilder(object):
         # Likely NOT able to find callee's address (e.g. extern symbols)
         callAddr = inst.findAddrInInst()
         if callAddr != FakeCalleeAddr:
-            log.debug(f'Found call from {inst.address:x} to {callAddr:x}')
+            log.debug(f'[Call] Found from {inst.address:x} to {callAddr:x}')
         else:
-            log.debug(f'Fake call from {inst.address:x} to FakeCalleeAddr')
+            log.debug(f'[Call] Fake from {inst.address:x} to FakeCalleeAddr')
 
         self.addr2Inst[inst.address].branchTo = callAddr
         self.enter(inst, callAddr)
@@ -329,14 +332,14 @@ class ControlFlowGraphBuilder(object):
         jumpAddr = inst.findAddrInInst()
         self.addr2Inst[inst.address].fallThrough = False
         self.addr2Inst[inst.address].branchTo = jumpAddr
-        log.debug(f'Found jump from {inst.address:x} to {jumpAddr:x}')
+        log.debug(f'[Jump] from {inst.address:x} to {jumpAddr:x}')
         self.enter(inst, jumpAddr)
         self.enter(inst, inst.address + inst.size)
 
     def end(self, inst) -> None:
         """Stop fall throught"""
         self.addr2Inst[inst.address].fallThrough = False
-        log.debug(f'Found end at {inst.address:x}')
+        log.debug(f'[End] at {inst.address:x}')
         if inst.address + inst.size <= self.programEnd:
             self.enter(inst, inst.address + inst.size)
 
@@ -370,7 +373,7 @@ class ControlFlowGraphBuilder(object):
         Group instructions into blocks, and
         connected based on branch and fall through.
         """
-        log.info('**** Create and connect blocks ****')
+        log.info('[ConnectBlocks] Create and connect blocks')
         currBlock = None
         for (addr, inst) in sorted(self.addr2Inst.items()):
             if currBlock is None or inst.start is True:
@@ -383,7 +386,7 @@ class ControlFlowGraphBuilder(object):
                     nextBlock = self.getBlockAtAddr(nextAddr)
                     currBlock.edgeList.append(nextBlock.startAddr)
                     addr1, addr2 = currBlock.startAddr, nextBlock.startAddr
-                    log.debug(f'Block {addr1:x} falls to {addr2:x}')
+                    log.debug(f'[ConnectBlocks] B{addr1:x} falls to B{addr2:x}')
 
             if inst.branchTo is not None:
                 block = self.getBlockAtAddr(inst.branchTo)
@@ -391,12 +394,12 @@ class ControlFlowGraphBuilder(object):
                     currBlock.edgeList.append(block.startAddr)
 
                 addr1, addr2 = currBlock.startAddr, block.startAddr
-                log.debug(f'Block {addr1:x} branches to {addr2:x}')
+                log.debug(f'[ConnectBlocks] B{addr1:x} branches to B{addr2:x}')
                 if inst.call is True:
                     if currBlock.startAddr not in block.edgeList:
                         block.edgeList.append(currBlock.startAddr)
 
-                    log.debug(f'Block {addr2:x} return back to {addr1:x}')
+                    log.debug(f'[ConnectBlocks] B{addr2:x} ret to B{addr1:x}')
 
             currBlock.instList.append(inst)
             currBlock.endAddr = max(currBlock.endAddr, inst.address)
@@ -405,7 +408,7 @@ class ControlFlowGraphBuilder(object):
 
     def exportToNxGraph(self):
         """Assume block/node is represented by its startAddr"""
-        log.info('**** Export to networkx-compatible graph ****')
+        log.info('[ExportToNxGraph] Generate DiGraph from connected blocks')
         for (addr, block) in sorted(self.addr2Block.items()):
             self.cfg.add_node('%08X' % addr, block=block)
 
@@ -414,21 +417,21 @@ class ControlFlowGraphBuilder(object):
                 self.cfg.add_edge('%08X' % addr, '%08X' % neighboor)
 
     def drawCfg(self) -> None:
-        log.info(f'**** Save graph plot to {self.filePrefix}.pdf ****')
+        log.info(f'[DrawCfg] Save graph plot to {self.filePrefix}.pdf')
         nx.draw(self.cfg, with_labels=True, font_weight='normal')
         plt.savefig('%s.pdf' % self.filePrefix, format='pdf')
         plt.clf()
 
     def printCfg(self):
-        log.info('**** Print CFG ****')
-        log.info(f'#nodes in cfg: {nx.number_of_nodes(self.cfg)}')
-        log.info(f'#edges in cfg: {nx.number_of_edges(self.cfg)}')
+        log.info(f'[PrintCfg] Print = {nx.number_of_nodes(self.cfg)} nodes')
         for (addr, block) in sorted(self.addr2Block.items()):
-            log.info(f'block {addr:x} [{block.startAddr:x}, {block.endAddr:x}]')
+            start, end = block.startAddr, block.endAddr
+            log.info(f'[PrintCfg] Block {addr:x}: [{start:x}, {end:x}]')
 
+        log.info(f'[PrintCfg] Print {nx.number_of_edges(self.cfg)} edges')
         for (addr, block) in sorted(self.addr2Block.items()):
             for neighboor in block.edgeList:
-                log.info(f'block {addr:x} -> {neighboor:x}')
+                log.info(f'[PrintCfg] Edge {addr:x} -> {neighboor:x}')
 
         self.drawCfg()
 
@@ -439,7 +442,7 @@ class ControlFlowGraphBuilder(object):
         progFile.close()
 
     def clearTmpFiles(self) -> None:
-        log.info('**** Remove temporary files ****')
+        log.info('[ClearTmpFiles] Remove temporary files')
         for ext in ['.text', '.prog']:
             os.remove(self.filePrefix + ext)
 
@@ -454,12 +457,12 @@ class AcfgBuilder(object):
         """
         Extract features in each block.
         """
-        log.info('Extract attributes from blocks')
+        log.info('[ExtractBlockAttrs] Extract block attributes from CFG')
         features = np.zeros((self.cfg.number_of_nodes(),
                              Block.getAttributesDim()))
         for (i, (node, attributes)) in enumerate(self.cfg.nodes(data=True)):
             block = attributes['block']
-            log.debug(f'Process block {block.startAddr:x}')
+            log.debug(f'[ExtractBlockAttrs] Extracting B{block.startAddr:x}')
             features[i, :] = block.getAttributes()
 
         return features
