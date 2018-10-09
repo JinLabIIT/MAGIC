@@ -51,6 +51,7 @@ class ControlFlowGraphBuilder(object):
         self.programEnd: int = -1
         self.programStart: int = -1
 
+        self.text: Dict[int, str] = {}  # Line number to raw string instruction
         self.program: Dict[str, str] = {}  # Addr to raw string instruction
         self.addr2Inst: OrderedDict[int, isn.Instruction] = OrderedDict()
         self.addr2InstAux: OrderedDict[int, isn.Instruction] = OrderedDict()
@@ -71,7 +72,7 @@ class ControlFlowGraphBuilder(object):
         self.extractTextSeg()
         self.createProgram()
         self.buildInsts()
-        self.clearTmpFiles()
+        # self.clearTmpFiles()
 
     def parseBlocks(self) -> None:
         """Second pass on blocks"""
@@ -110,7 +111,6 @@ class ControlFlowGraphBuilder(object):
         lineNum = 1
         imcompleteByte = re.compile(r'^\?\?$')
         fileInput = open(self.filePrefix + '.asm', 'rb')
-        fileOutput = open(self.filePrefix + '.text', 'w')
         for line in fileInput:
             elems = line.split()
             decodedElems = [x.decode("utf-8", "ignore") for x in elems]
@@ -138,7 +138,7 @@ class ControlFlowGraphBuilder(object):
                 instElems = [addr] + decodedElems[startIdx: endIdx]
                 s1, s2 = ' '.join(decodedElems), ' '.join(instElems)
                 log.debug(f"[ExtractSeg] Processed L{lineNum}: '{s1}'=>'{s2}'")
-                fileOutput.write(" ".join(instElems) + '\n')
+                self.text[lineNum] = " ".join(instElems)
             else:
                 l = " ".join(decodedElems)
                 log.debug(f'[ExtractSeg] No instruction L{lineNum}: {l}')
@@ -146,7 +146,6 @@ class ControlFlowGraphBuilder(object):
             lineNum += 1
 
         fileInput.close()
-        fileOutput.close()
 
     def isHeaderInfo(self, sameAddrInsts: List[str]) -> bool:
         for inst in sameAddrInsts:
@@ -223,52 +222,47 @@ class ControlFlowGraphBuilder(object):
         log.info('[CreateProg] Aggreate to unique-addressed instructions')
         currAddr = -1
         sameAddrInsts = []
-        with open(self.filePrefix + ".text", 'r') as textFile:
-            for line in textFile:
-                elems = line.rstrip('\n').split(' ')
-                addr, inst = elems[0], elems[1:]
-                if currAddr == -1:
-                    currAddr = addr
-                    sameAddrInsts.append(" ".join(inst))
-                else:
-                    if addr != currAddr:
-                        self.aggregate(currAddr, sameAddrInsts)
-                        sameAddrInsts.clear()
+        for (lineNum, line) in self.text.items():
+            elems = line.split(' ')
+            addr, inst = elems[0], elems[1:]
+            if currAddr == -1:
+                currAddr = addr
+                sameAddrInsts.append(" ".join(inst))
+            else:
+                if addr != currAddr:
+                    self.aggregate(currAddr, sameAddrInsts)
+                    sameAddrInsts.clear()
 
-                    currAddr = addr
-                    sameAddrInsts.append(" ".join(inst))
+                currAddr = addr
+                sameAddrInsts.append(" ".join(inst))
 
-            if len(sameAddrInsts) > 0:
-                self.aggregate(currAddr, sameAddrInsts)
-                sameAddrInsts.clear()
+        if len(sameAddrInsts) > 0:
+            self.aggregate(currAddr, sameAddrInsts)
 
-            if len(self.program) == 0:
-                log.error(f'[CreateProg] No code in {self.filePrefix}.asm')
-
-            self.saveProgram()
+        if len(self.program) == 0:
+            log.error(f'[CreateProg] No code in {self.filePrefix}.asm')
 
     def buildInsts(self) -> None:
         """Create Instruction object for each address, store in addr2Inst"""
         log.info(f'[BuildInsts] Build insts from {self.filePrefix + ".prog"}')
         prevAddr = -1
-        with open(self.filePrefix + '.prog', 'r') as progFile:
-            for line in progFile:
-                inst = self.instBuilder.createInst(line)
-                if prevAddr != -1:
-                    self.addr2Inst[prevAddr].size = inst.address - prevAddr
+        for (addr, line) in self.program.items():
+            inst = self.instBuilder.createInst(addr + ' ' + line)
+            if prevAddr != -1:
+                self.addr2Inst[prevAddr].size = inst.address - prevAddr
 
-                self.addr2Inst[inst.address] = inst
-                log.debug(f'{inst.address:x} {inst.operand}')
-                if self.programStart == -1:
-                    self.programStart = inst.address
-                self.programEnd = max(inst.address, self.programEnd)
-                prevAddr = inst.address
+            self.addr2Inst[inst.address] = inst
+            log.debug(f'{inst.address:x} {inst.operand}')
+            if self.programStart == -1:
+                self.programStart = inst.address
+            self.programEnd = max(inst.address, self.programEnd)
+            prevAddr = inst.address
 
-            # Last inst get default size 2
-            if prevAddr > 0:
-                self.addr2Inst[prevAddr].size = 2
-            else:
-                addCodeSegLog(self.binaryId)
+        # Last inst get default size 2
+        if prevAddr > 0:
+            self.addr2Inst[prevAddr].size = 2
+        else:
+            addCodeSegLog(self.binaryId)
 
         start, end = self.programStart, self.programEnd
         log.info(f'[BuildInsts] Finish with range [{start:x}, {end:x}]')
@@ -410,11 +404,11 @@ class ControlFlowGraphBuilder(object):
         """Assume block/node is represented by its startAddr"""
         log.info('[ExportToNxGraph] Generate DiGraph from connected blocks')
         for (addr, block) in sorted(self.addr2Block.items()):
-            self.cfg.add_node('%08X' % addr, block=block)
+            self.cfg.add_node(addr, block=block)
 
         for (addr, block) in self.addr2Block.items():
             for neighboor in block.edgeList:
-                self.cfg.add_edge('%08X' % addr, '%08X' % neighboor)
+                self.cfg.add_edge(addr, neighboor)
 
     def drawCfg(self) -> None:
         log.info(f'[DrawCfg] Save graph plot to {self.filePrefix}.pdf')
@@ -439,7 +433,15 @@ class ControlFlowGraphBuilder(object):
         progFile = open(self.filePrefix + '.prog', 'w')
         for (addr, inst) in self.program.items():
             progFile.write(addr + ' ' + inst + '\n')
+
         progFile.close()
+
+    def saveText(self) -> None:
+        textFile = open(self.filePrefix + '.text', 'w')
+        for (lineNum, line) in self.text.items():
+            textFile.write(lineNum + ' ' + inst + '\n')
+
+        textFile.close()
 
     def clearTmpFiles(self) -> None:
         log.info('[ClearTmpFiles] Remove temporary files')
@@ -459,8 +461,8 @@ class AcfgBuilder(object):
         """
         log.info('[ExtractBlockAttrs] Extract block attributes from CFG')
         features = np.zeros((self.cfg.number_of_nodes(),
-                             Block.getAttributesDim()))
-        for (i, (node, attributes)) in enumerate(self.cfg.nodes(data=True)):
+                             Block.getAttributesDim()), dtype=float)
+        for (i, (node, attributes)) in enumerate(sorted(self.cfg.nodes(data=True))):
             block = attributes['block']
             log.debug(f'[ExtractBlockAttrs] Extracting B{block.startAddr:x}')
             features[i, :] = block.getAttributes()
@@ -470,5 +472,6 @@ class AcfgBuilder(object):
     def getAttributedCfg(self):
         self.cfg = self.cfgBuilder.getControlFlowGraph()
         blockAttrs = self.extractBlockAttributes()
-        adjMatrix = nx.adjacency_matrix(self.cfg)
+        adjMatrix = nx.adjacency_matrix(self.cfg,
+                                        nodelist=sorted(self.cfg.nodes()))
         return [blockAttrs, adjMatrix]

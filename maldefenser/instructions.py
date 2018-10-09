@@ -212,7 +212,8 @@ class InstBuilder(object):
         self.seenInst: set = set()
 
     def createInst(self, progLine: str) -> Instruction:
-        elems = progLine.rstrip('\n').split(' ')
+        log.debug(f'[InstBuilder] Create inst from "{progLine}"')
+        elems = progLine.split(' ')
         address = elems[0]
         if len(elems) > 2 and elems[2] in DataInstDict:
             elems[1], elems[2] = elems[2], elems[1]

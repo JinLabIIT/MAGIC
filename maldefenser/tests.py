@@ -45,7 +45,7 @@ class TestCfgBuildedr(unittest.TestCase):
                           '4010a9', '4010ac', '4010ae', '4010b3',
                           '4010b5', '4010b7',
                           ]
-        expectedBlocks = ["%08X" % int(x, 16) for x in expectedBlocks]
+        expectedBlocks = [int(x, 16) for x in expectedBlocks]
         edgeDict = {
             '-2': ['401079', '401090'],
             'ff': ['4010b7'],
@@ -68,8 +68,7 @@ class TestCfgBuildedr(unittest.TestCase):
         expectedEdges = []
         for (src, destinations) in edgeDict.items():
             for dst in destinations:
-                expectedEdges.append(("%08X" % int(src, 16),
-                                      "%08X" % int(dst, 16)))
+                expectedEdges.append((int(src, 16), int(dst, 16)))
 
         for block in expectedBlocks:
             self.assertTrue(block in cfgBuilder.cfg.nodes(),
@@ -119,7 +118,7 @@ class TestCfgBuildedr(unittest.TestCase):
             cfgBuilder = ControlFlowGraphBuilder(bId, pathPrefix)
             cfgBuilder.parseInstructions()
 
-    @unittest.skip("Uncomment to run")
+    # @unittest.skip("Uncomment to run")
     def testEvalHexExpr(self):
         expressions = ['14769F + 48D - 48Dh - 14769Fh+ 14769F',
                        '4477DAB5F7',
@@ -180,10 +179,9 @@ class TestAcfgPipeline(unittest.TestCase):
         worker = AcfgWorker(pathPrefix, binaryIds)
         worker.discoverInstDictionary('ut_seen_inst')
 
-    @unittest.skip("Uncomment to run")
+    # @unittest.skip("Uncomment to run")
     def testWorkerRun(self):
         pathPrefix = '../TrainSet'
-        labelPath = '../trainLabels.csv'
         binaryIds1 = [
             'exGy3iaKJmRprdHcB0NO',
             '0Q4ALVSRnlHUBjyOb1sw',
@@ -192,14 +190,61 @@ class TestAcfgPipeline(unittest.TestCase):
             'cqdUoQDaZfGkt5ilBe7n',
             'BKpbxgMPWUNZosdnO8Ak',
         ]
-        worker1 = AcfgWorker(pathPrefix, binaryIds1, labelPath)
+        worker1 = AcfgWorker(pathPrefix, binaryIds1)
         worker1.start()
-        worker2 = AcfgWorker(pathPrefix, binaryIds2, labelPath)
+        worker2 = AcfgWorker(pathPrefix, binaryIds2)
         worker2.start()
 
         worker1.join()
         worker2.join()
 
+    def testAggregateDgcnnFormat(self):
+        pathPrefix = '../DataSamples'
+        labelPath = '../trainLabels.csv'
+        binaryIds = ['test',]
+        master = AcfgMaster(pathPrefix, labelPath, binaryIds)
+        master.bId2Label['test'] = '1'
+        master.dispatchWorkers(1)
+        expectedRet = [
+            [1],      # number of graphs
+            [21, 1],  # number of nodes, label of graph
+            #               0  1  2  3  4  5  6  7  8  9 10 11 12
+            [1,2,10,13,     0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 2.0, 1.0],  # -2  0
+            [1,0,           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],  # -1  1
+            [1,1,20,        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0],  # FF  2
+            [1,2,3,4,       1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 2.0, 1.0],  # 48  3
+            [1,1,6,         1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0],  # 50  4
+            [1,0,           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0],  # 52  5
+            [1,1,7,         0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 0.0, 3.0, 0.0, 8.0, 0.0, 1.0, 5.0],  # 54  6
+            [1,4,7,8,12,17, 1.0, 2.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 1.0, 0.0, 4.0, 5.0],  # 64  7
+            [1,2,6,9,       1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 2.0, 0.0, 2.0, 3.0],  # 6d  8
+            [1,1,10,        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0],  # 76  9
+            [1,3,0,10,11,   1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 3.0, 4.0],  # 79  10
+            [1,0,           0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 2.0],  # 80  11
+            [1,3,7,13,14,   1.0, 0.0, 1.0, 1.0, 0.0, 2.0, 0.0, 0.0, 1.0, 3.0, 0.0, 3.0, 6.0],  # 84  12
+            [1,2,0,15,      1.0, 2.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 4.0, 3.0, 0.0, 2.0, 9.0],  # 90  13
+            [1,1,15,        0.0, 0.0, 1.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 3.0],  # a3  14
+            [1,0,           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 2.0],  # a9  15
+            [1,1,17,        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 1.0],  # ac  16
+            [1,2,0,7,       1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 0.0, 4.0, 0.0, 2.0, 3.0],  # ae  17
+            [1,2,12,19,     1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 2.0, 1.0],  # b3  18
+            [1,2,1,20,      1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0],  # b5  19
+            [1,1,2,         0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 2.0],  # b7  20
+        ]
+        expLines = []
+        for row in expectedRet:
+            strElems = [str(x) for x in row]
+            expLines.append(" ".join(strElems))
+
+        with open(pathPrefix + '/' + 'Acfg.txt') as file:
+            lineNum = 1
+            for line in file:
+                resultLine = line.rstrip('\n')
+                self.assertEqual(expLines[lineNum - 1], resultLine,
+                                 'L%d exp != result' % lineNum)
+                lineNum += 1
+
+    # @unittest.skip("Uncomment to run")
     def testMasterDispatch(self):
         pathPrefix = '../TrainSet'
         labelPath = '../trainLabels.csv'
@@ -210,7 +255,7 @@ class TestAcfgPipeline(unittest.TestCase):
             'BKpbxgMPWUNZosdnO8Ak',
         ]
         master = AcfgMaster(pathPrefix, labelPath, binaryIds)
-        master.dispatchWorkers(2)
+        master.dispatchWorkers(4)
 
 
 if __name__ == '__main__':
