@@ -5,6 +5,7 @@ import scipy as sp
 import glog as log
 import glob
 import os
+import time
 import cfg_builder
 import threading
 from typing import List, Dict
@@ -45,7 +46,7 @@ class AcfgWorker(threading.Thread):
     def run(self) -> None:
         idCnt = len(self.binaryIds)
         for (i, bId) in enumerate(self.binaryIds):
-            log.debug(f'[{self.name}] Processing {i + 1}th/{idCnt} binary')
+            log.info(f'[{self.name}] Working on {i + 1}th/{idCnt} binary {bId}')
             acfgBuilder = cfg_builder.AcfgBuilder(bId, self.pathPrefix)
             features, adjMatrix = acfgBuilder.getAttributedCfg()
             self.featureMatrices[bId] = features
@@ -72,9 +73,9 @@ class AcfgMaster(object):
         self.bId2Label: Dict[str, str] = self.loadLabel()
         if binaryIds is None:
             self.binaryIds: List[str] = self.loadDefaultBinaryIds()
-            self.binaryIds = self.binaryIds[:1024]
+            # self.binaryIds = self.binaryIds[:10]
         else:
-            self.binaryIds = binaryIds
+            self.binaryIds: List[str] = binaryIds
 
         self.bId2Worker: Dict[str, AcfgWorker] = {}
 
@@ -166,4 +167,8 @@ if __name__ == '__main__':
     pathPrefix = '../TrainSet'
     labelPath = '../trainLabels.csv'
     master = AcfgMaster(pathPrefix, labelPath)
+
+    start = time.process_time()
     master.dispatchWorkers(1)
+    runtime = time.process_time() - start
+    log.info(f'Running time of 1-thread: {runtime} seconds')

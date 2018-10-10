@@ -10,7 +10,7 @@ from utils import delCodeSegLog, evalHexAddSubExpr
 class TestCfgBuildedr(unittest.TestCase):
     def setUp(self):
         super(TestCfgBuildedr, self).setUp()
-        self.skipTest('Uncomment me to run this test case')
+        # self.skipTest('Uncomment me to run this test case')
 
     @unittest.skip("Uncomment to run")
     def testParseInstructions(self):
@@ -174,7 +174,7 @@ class TestCfgBuildedr(unittest.TestCase):
 class TestAcfgPipeline(unittest.TestCase):
     def setUp(self):
         super(TestAcfgPipeline, self).setUp()
-        self.skipTest('Uncomment me to run this test case')
+        # self.skipTest('Uncomment me to run this test case')
 
     @unittest.skip("Uncomment to run")
     def testDiscoverInstDict(self):
@@ -268,7 +268,10 @@ class TestAcfgPipeline(unittest.TestCase):
 
 
 class TestAcfgRunningTime(unittest.TestCase):
-    # @unittest.skip("Uncomment to run")
+    def setUp(self):
+        super(TestAcfgRunningTime, self).setUp()
+        self.skipTest('Measuring running time may takes hours or days. Don\'t run me unless you are sure')
+
     def testRunningTime(self):
         pathPrefix = '../TrainSet'
         labelPath = '../trainLabels.csv'

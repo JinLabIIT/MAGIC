@@ -208,13 +208,13 @@ class ControlFlowGraphBuilder(object):
             log.debug(f'[AggrInst] Concat all DataDef into unified inst')
         else:
             # Concat unaggregatable insts
-            log.debug(f'[AggrInst] Fail aggregating insts at {addr}')
+            log.debug(f'[AggrInst:{self.binaryId}] Fail aggregating insts at {addr}')
             progLine = ''
             for inst in validInst:
                 progLine += inst.rstrip('\n\\') + ' '
                 log.debug('[AggrInst] %s: %s' % (addr, inst))
 
-            log.debug(f'[AggrInst] Concat to: {progLine}')
+            log.debug(f'[AggrInst:{self.binaryId}] Concat to: {progLine}')
             self.program[addr] = progLine.rstrip(' ')
 
     def createProgram(self) -> None:
