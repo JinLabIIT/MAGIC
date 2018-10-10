@@ -1,12 +1,17 @@
 import glog as log
 import numpy as np
 import unittest
+import time
 from cfg_builder import ControlFlowGraphBuilder, AcfgBuilder
 from acfg_pipeline import AcfgWorker, AcfgMaster
 from utils import delCodeSegLog, evalHexAddSubExpr
 
 
 class TestCfgBuildedr(unittest.TestCase):
+    def setUp(self):
+        super(TestCfgBuildedr, self).setUp()
+        self.skipTest('Uncomment me to run this test case')
+
     @unittest.skip("Uncomment to run")
     def testParseInstructions(self):
         pathPrefix = '../TrainSet'
@@ -167,6 +172,10 @@ class TestCfgBuildedr(unittest.TestCase):
 
 
 class TestAcfgPipeline(unittest.TestCase):
+    def setUp(self):
+        super(TestAcfgPipeline, self).setUp()
+        self.skipTest('Uncomment me to run this test case')
+
     @unittest.skip("Uncomment to run")
     def testDiscoverInstDict(self):
         pathPrefix = '../TrainSet'
@@ -244,7 +253,7 @@ class TestAcfgPipeline(unittest.TestCase):
                                  'L%d exp != result' % lineNum)
                 lineNum += 1
 
-    # @unittest.skip("Uncomment to run")
+    @unittest.skip("Uncomment to run")
     def testMasterDispatch(self):
         pathPrefix = '../TrainSet'
         labelPath = '../trainLabels.csv'
@@ -256,6 +265,25 @@ class TestAcfgPipeline(unittest.TestCase):
         ]
         master = AcfgMaster(pathPrefix, labelPath, binaryIds)
         master.dispatchWorkers(4)
+
+
+class TestAcfgRunningTime(unittest.TestCase):
+    # @unittest.skip("Uncomment to run")
+    def testRunningTime(self):
+        pathPrefix = '../TrainSet'
+        labelPath = '../trainLabels.csv'
+
+        master1 = AcfgMaster(pathPrefix, labelPath)
+        start = time.process_time()
+        master1.dispatchWorkers(1)
+        runtime1 = time.process_time() - start
+        log.info(f'Running time of 1-thread: {runtime1} seconds')
+
+        master2 = AcfgMaster(pathPrefix, labelPath)
+        start = time.process_time()
+        master2.dispatchWorkers(8)
+        runtime2 = time.process_time() - start
+        log.info(f'Running time of 8-thread: {runtime2} seconds')
 
 
 if __name__ == '__main__':

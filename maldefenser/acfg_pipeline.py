@@ -32,7 +32,7 @@ class AcfgWorker(threading.Thread):
     def discoverInstDictionary(self, exportTo: str) -> None:
         idCnt = len(self.binaryIds)
         for (i, bId) in enumerate(self.binaryIds):
-            log.info(f'[DiscoverInstDict] Processing {i}/{idCnt} {bId}.asm')
+            log.debug(f'[DiscoverInstDict] Processing {i}/{idCnt} {bId}.asm')
             cfgBuilder = cfg_builder.ControlFlowGraphBuilder(bId,
                                                              self.pathPrefix)
             cfgBuilder.parseInstructions()
@@ -45,7 +45,7 @@ class AcfgWorker(threading.Thread):
     def run(self) -> None:
         idCnt = len(self.binaryIds)
         for (i, bId) in enumerate(self.binaryIds):
-            log.info(f'[{self.name}] Processing {i + 1}th/{idCnt} binary')
+            log.debug(f'[{self.name}] Processing {i + 1}th/{idCnt} binary')
             acfgBuilder = cfg_builder.AcfgBuilder(bId, self.pathPrefix)
             features, adjMatrix = acfgBuilder.getAttributedCfg()
             self.featureMatrices[bId] = features
@@ -72,7 +72,7 @@ class AcfgMaster(object):
         self.bId2Label: Dict[str, str] = self.loadLabel()
         if binaryIds is None:
             self.binaryIds: List[str] = self.loadDefaultBinaryIds()
-            self.binaryIds = self.binaryIds[:256]
+            self.binaryIds = self.binaryIds[:1024]
         else:
             self.binaryIds = binaryIds
 
@@ -124,12 +124,12 @@ class AcfgMaster(object):
         return indices
 
     def aggregateDgcnnFormat(self) -> None:
-        log.info(f"[AggrDgcnnFormat] Aggregate ACFGs to txt format")
+        log.debug(f"[AggrDgcnnFormat] Aggregate ACFGs to txt format")
         numBinaries = len(self.binaryIds)
-        output = open(self.pathPrefix + '/' + 'Acfg.txt', 'w')
+        output = open(self.pathPrefix + '/' + 'ACFG.txt', 'w')
         output.write("%d\n" % numBinaries)
         for (b, bId) in enumerate(self.binaryIds):
-            log.info(f"[AggrDgcnnFormat] Processing {b + 1}th/{numBinaries} ACFG")
+            log.debug(f"[AggrDgcnnFormat] Processing {b + 1}th/{numBinaries} ACFG")
             label = self.bId2Label[bId]
             features = self.bId2Worker[bId].featureMatrices[bId]
             spAdjacentMat = self.bId2Worker[bId].adjMatrices[bId]
@@ -152,13 +152,13 @@ class AcfgMaster(object):
         return features, sp_adjacent_mat
 
     def clearTmpFiles(self) -> None:
-        log.info(f"[ClearTmpFiles] Remove temporary files ****")
+        log.debug(f"[ClearTmpFiles] Remove temporary files ****")
         for (i, bId) in enumerate(self.binaryIds):
             filePrefix = self.pathPrefix + '/' + bId
             for ext in ['.label.txt', '.features.txt', '.adjacent.npz']:
                 os.remove(filePrefix + ext)
 
-        log.info(f"[ClearTmpFiles] {len(self.binaryIds)} files removed ****")
+        log.debug(f"[ClearTmpFiles] {len(self.binaryIds)} files removed ****")
 
 
 if __name__ == '__main__':
