@@ -211,7 +211,7 @@ class TestAcfgPipeline(unittest.TestCase):
         pathPrefix = '../DataSamples'
         labelPath = '../trainLabels.csv'
         binaryIds = ['test',]
-        master = AcfgMaster(pathPrefix, labelPath, binaryIds)
+        master = AcfgMaster(pathPrefix, labelPath, 'test', binaryIds)
         master.bId2Label['test'] = '1'
         master.dispatchWorkers(1)
         expectedRet = [
@@ -253,7 +253,7 @@ class TestAcfgPipeline(unittest.TestCase):
                                  'L%d exp != result' % lineNum)
                 lineNum += 1
 
-    @unittest.skip("Uncomment to run")
+    # @unittest.skip("Uncomment to run")
     def testMasterDispatch(self):
         pathPrefix = '../TrainSet'
         labelPath = '../trainLabels.csv'
@@ -263,8 +263,34 @@ class TestAcfgPipeline(unittest.TestCase):
             'cqdUoQDaZfGkt5ilBe7n',
             'BKpbxgMPWUNZosdnO8Ak',
         ]
-        master = AcfgMaster(pathPrefix, labelPath, binaryIds)
+        master = AcfgMaster(pathPrefix, labelPath,
+                            'TestMasterDispatch', binaryIds)
         master.dispatchWorkers(4)
+
+    # @unittest.skip("Uncomment to run")
+    def testIfSkipEmptyCfgs(self):
+        pathPrefix = '../TrainSet'
+        labelPath = '../trainLabels.csv'
+        binaryIds = [
+            'a9oIzfw03ED4lTBCt52Y',
+            'da3XhOZzQEbKVtLgMYWv',
+        ]
+        master = AcfgMaster(pathPrefix, labelPath,
+                            'TestIfSkipEmptyCfgs', binaryIds)
+        master.dispatchWorkers(1)
+        with open(pathPrefix + '/TestIfSkipEmptyCfgs.txt') as f:
+            content = f.read()
+            self.assertEqual(int(content), 0, '#graphs should be zero')
+
+    def testValidAddrFormat(self):
+        pathPrefix = '../TrainSet'
+        labelPath = '../trainLabels.csv'
+        binaryIds = [
+            '1x2u5Ws7tzFRAgyqoJBV',
+        ]
+        master = AcfgMaster(pathPrefix, labelPath,
+                            'TestValidAddrFormat', binaryIds)
+        master.dispatchWorkers(1)
 
 
 class TestAcfgRunningTime(unittest.TestCase):
@@ -276,13 +302,13 @@ class TestAcfgRunningTime(unittest.TestCase):
         pathPrefix = '../TrainSet'
         labelPath = '../trainLabels.csv'
 
-        master1 = AcfgMaster(pathPrefix, labelPath)
+        master1 = AcfgMaster(pathPrefix, labelPath, 'TestRunningTime1')
         start = time.process_time()
         master1.dispatchWorkers(1)
         runtime1 = time.process_time() - start
         log.info(f'Running time of 1-thread: {runtime1} seconds')
 
-        master2 = AcfgMaster(pathPrefix, labelPath)
+        master2 = AcfgMaster(pathPrefix, labelPath, 'TestRunningTime8')
         start = time.process_time()
         master2.dispatchWorkers(8)
         runtime2 = time.process_time() - start

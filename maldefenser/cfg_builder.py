@@ -248,6 +248,9 @@ class ControlFlowGraphBuilder(object):
         prevAddr = -1
         for (addr, line) in self.program.items():
             inst = self.instBuilder.createInst(addr + ' ' + line)
+            if inst is None:
+                continue
+
             if prevAddr != -1:
                 self.addr2Inst[prevAddr].size = inst.address - prevAddr
 
@@ -471,6 +474,9 @@ class AcfgBuilder(object):
 
     def getAttributedCfg(self):
         self.cfg = self.cfgBuilder.getControlFlowGraph()
+        if self.cfg.number_of_nodes() == 0:
+            return [None, None]
+
         blockAttrs = self.extractBlockAttributes()
         adjMatrix = nx.adjacency_matrix(self.cfg,
                                         nodelist=sorted(self.cfg.nodes()))

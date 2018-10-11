@@ -64,11 +64,13 @@ class AcfgMaster(object):
 
     def __init__(self,
                  pathPrefix: str,
-                 labelPath: str = '',
+                 labelPath: str,
+                 outputTxtName: str = 'ACFG',
                  binaryIds: List[str] = None) -> None:
         super(AcfgMaster, self).__init__()
         self.pathPrefix = pathPrefix
         self.labelPath = labelPath
+        self.outputTxtName = outputTxtName
         delCodeSegLog()
         self.bId2Label: Dict[str, str] = self.loadLabel()
         if binaryIds is None:
@@ -87,11 +89,16 @@ class AcfgMaster(object):
         return bId2Label
 
     def loadDefaultBinaryIds(self) -> List[str]:
+        """
+        Instead of just return bId2Label.keys(), check if binary file
+        do exist under pathPrefix directory
+        """
         binaryIds = []
         for path in glob.glob(self.pathPrefix + '/*.asm', recursive=False):
             filename = path.split('/')[-1]
             id = filename.split('.')[0]
             binaryIds.append(id)
+            assert id in self.bId2Label
 
         return binaryIds
 
@@ -127,15 +134,24 @@ class AcfgMaster(object):
     def aggregateDgcnnFormat(self) -> None:
         log.debug(f"[AggrDgcnnFormat] Aggregate ACFGs to txt format")
         numBinaries = len(self.binaryIds)
-        output = open(self.pathPrefix + '/' + 'ACFG.txt', 'w')
+        for bId in self.binaryIds:
+            if self.bId2Worker[bId].featureMatrices[bId] is None:
+                numBinaries -= 1
+            elif self.bId2Worker[bId].adjMatrices[bId] is None:
+                numBinaries -= 1
+
+        output = open(self.pathPrefix + '/' + self.outputTxtName + '.txt', 'w')
         output.write("%d\n" % numBinaries)
         for (b, bId) in enumerate(self.binaryIds):
             log.debug(f"[AggrDgcnnFormat] Processing {b + 1}th/{numBinaries} ACFG")
             label = self.bId2Label[bId]
             features = self.bId2Worker[bId].featureMatrices[bId]
             spAdjacentMat = self.bId2Worker[bId].adjMatrices[bId]
-            output.write("%d %s\n" % (features.shape[0], label))
+            if features is None or spAdjacentMat is None:
+                log.warning(f'[AggrDgcnnFormat:{bId}] Empty CFG and features')
+                continue
 
+            output.write("%d %s\n" % (features.shape[0], label))
             indices = self.neighborsFromAdjacentMatrix(spAdjacentMat)
             for (i, feature) in enumerate(features):
                 neighbors = indices[i] if i in indices else []
@@ -143,7 +159,7 @@ class AcfgMaster(object):
                              (len(neighbors), list2Str(neighbors, feature)))
 
         output.close()
-        log.info(f"[AggrDgcnnFormat] Converted {numBinaries} ACFGs")
+        log.info(f"[AggrDgcnnFormat] {numBinaries}/{len(self.binaryIds)} converted")
 
     def loadAcfgMatrices(self, bId):
         filePrefix = self.pathPrefix + '/' + bId

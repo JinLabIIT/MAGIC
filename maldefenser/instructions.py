@@ -214,7 +214,13 @@ class InstBuilder(object):
     def createInst(self, progLine: str) -> Instruction:
         log.debug(f'[InstBuilder] Create inst from "{progLine}"')
         elems = progLine.split(' ')
+
         address = elems[0]
+        addrPattern = re.compile(r'[A-Z0-9a-z]{8}')
+        if addrPattern.match(address) is None:
+            log.warning(f'[InstBuilder] Invalid addr in "{progLine}"')
+            return None
+
         if len(elems) > 2 and elems[2] in DataInstDict:
             elems[1], elems[2] = elems[2], elems[1]
 
