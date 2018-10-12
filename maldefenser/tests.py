@@ -4,7 +4,7 @@ import unittest
 import time
 from cfg_builder import ControlFlowGraphBuilder, AcfgBuilder
 from acfg_pipeline import AcfgWorker, AcfgMaster
-from utils import delCodeSegLog, evalHexAddSubExpr
+from dp_utils import delCodeSegLog, evalHexAddSubExpr
 
 
 class TestCfgBuildedr(unittest.TestCase):
@@ -114,8 +114,17 @@ class TestCfgBuildedr(unittest.TestCase):
     def testEmptyCodeSeg(self):
         pathPrefix = '../TrainSet'
         binaryIds = [
-            'a9oIzfw03ED4lTBCt52Y',
             'da3XhOZzQEbKVtLgMYWv',
+            'a9oIzfw03ED4lTBCt52Y',
+            'fRLS3aKkijp4GH0Ds6Pv',
+            '6tfw0xSL2FNHOCJBdlaA',
+            'a5btWIHhlzjuXiBykZG6',
+            'd0iHC6ANYGon7myPFzBe',
+            '58kxhXouHzFd4g3rmInB',
+            'fyH8oWql4rg7tEJSLpIB',
+            'IidxQvXrlBkWPZAfcqKT',
+            'cf4nzsoCmudt1kwleOTI',
+            'GXFP0dYvns5NoQtIBECf',
         ]
         delCodeSegLog()
         for bId in binaryIds:
@@ -272,8 +281,17 @@ class TestAcfgPipeline(unittest.TestCase):
         pathPrefix = '../TrainSet'
         labelPath = '../trainLabels.csv'
         binaryIds = [
-            'a9oIzfw03ED4lTBCt52Y',
             'da3XhOZzQEbKVtLgMYWv',
+            'a9oIzfw03ED4lTBCt52Y',
+            'fRLS3aKkijp4GH0Ds6Pv',
+            '6tfw0xSL2FNHOCJBdlaA',
+            'a5btWIHhlzjuXiBykZG6',
+            'd0iHC6ANYGon7myPFzBe',
+            '58kxhXouHzFd4g3rmInB',
+            'fyH8oWql4rg7tEJSLpIB',
+            'IidxQvXrlBkWPZAfcqKT',
+            'cf4nzsoCmudt1kwleOTI',
+            'GXFP0dYvns5NoQtIBECf',
         ]
         master = AcfgMaster(pathPrefix, labelPath,
                             'TestIfSkipEmptyCfgs', binaryIds)

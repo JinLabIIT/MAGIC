@@ -3,7 +3,7 @@ import re
 import glog as log
 from instructions_data import *
 from typing import List
-from utils import findAddrInOperators, matchConstant
+from dp_utils import findAddrInOperators, matchConstant
 
 
 class Instruction(object):

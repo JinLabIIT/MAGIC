@@ -9,7 +9,7 @@ import time
 import cfg_builder
 import threading
 from typing import List, Dict
-from utils import delCodeSegLog, list2Str
+from dp_utils import delCodeSegLog, list2Str
 
 
 class AcfgWorker(threading.Thread):

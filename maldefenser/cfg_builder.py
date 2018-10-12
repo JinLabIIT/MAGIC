@@ -6,7 +6,7 @@ import networkx as nx
 import instructions as isn
 import numpy as np
 import matplotlib.pyplot as plt
-from utils import FakeCalleeAddr, addCodeSegLog, InvalidAddr
+from dp_utils import FakeCalleeAddr, addCodeSegLog, InvalidAddr
 from collections import OrderedDict
 from typing import List, Dict
 
