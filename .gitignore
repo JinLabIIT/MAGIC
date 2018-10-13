@@ -7,3 +7,10 @@ BytesRep
 __pycache__
 train.7z
 test.7z
+trainLabels.csv
+sampleSubmission.csv
+*.pyc
+*.pkl
+maldefenser/data/MSACFG
+maldefenser/data/SMALLACFG
+maldefenser/data/DD
