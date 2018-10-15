@@ -2,7 +2,7 @@
 import re
 import glog as log
 from instructions_data import *
-from typing import List
+from typing import List, Set
 from dp_utils import findAddrInOperators, matchConstant
 
 
@@ -209,7 +209,7 @@ class InstBuilder(object):
 
     def __init__(self):
         super(InstBuilder, self).__init__()
-        self.seenInst: set = set()
+        self.seenInst: Set[str] = set()
 
     def createInst(self, progLine: str) -> Instruction:
         log.debug(f'[InstBuilder] Create inst from "{progLine}"')

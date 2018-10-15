@@ -1,7 +1,8 @@
 #!/usr/bin/python3.7
 import re
+import glob
 import glog as log
-from typing import List
+from typing import List, Dict
 
 FakeCalleeAddr = -2
 InvalidAddr = -1
@@ -107,3 +108,20 @@ def matchConstant(line: str) -> List[int]:
         # strings.append('%s:%d' % (operand, len(match)))
 
     return [numericCnts, stringCnts]
+
+
+def loadBinaryIds(pathPrefix: str,
+                  bId2Label: Dict[str, str] = None) -> List[str]:
+    """
+    Instead of just return @bId2Label.keys(), check if binary file
+    do exist under @pathPrefix directory
+    """
+    binaryIds = []
+    for path in glob.glob(pathPrefix + '/*.asm', recursive=False):
+        filename = path.split('/')[-1]
+        id = filename.split('.')[0]
+        binaryIds.append(id)
+        if bId2Label is not None:
+            assert id in bId2Label
+
+    return binaryIds

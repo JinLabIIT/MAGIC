@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from dp_utils import FakeCalleeAddr, addCodeSegLog, InvalidAddr
 from collections import OrderedDict
-from typing import List, Dict
+from typing import List, Dict, Set
 
 
 class Block(object):
@@ -67,11 +67,12 @@ class ControlFlowGraphBuilder(object):
         self.parseInstructions()
         self.parseBlocks()
 
-    def parseInstructions(self) -> None:
+    def parseInstructions(self) -> Set[str]:
         """First pass on instructions"""
         self.extractTextSeg()
         self.createProgram()
         self.buildInsts()
+        return self.instBuilder.seenInst
         # self.clearTmpFiles()
 
     def parseBlocks(self) -> None:

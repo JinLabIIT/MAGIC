@@ -4,7 +4,7 @@ import unittest
 import time
 from cfg_builder import ControlFlowGraphBuilder, AcfgBuilder
 from acfg_pipeline import AcfgWorker, AcfgMaster
-from dp_utils import delCodeSegLog, evalHexAddSubExpr
+from dp_utils import delCodeSegLog, evalHexAddSubExpr, loadBinaryIds
 
 
 class TestCfgBuildedr(unittest.TestCase):
@@ -195,7 +195,14 @@ class TestAcfgPipeline(unittest.TestCase):
             'BKpbxgMPWUNZosdnO8Ak',
         ]
         worker = AcfgWorker(pathPrefix, binaryIds)
-        worker.discoverInstDictionary('ut_seen_inst')
+        worker.discoverInstDictionary('testDiscoverInstDict')
+
+    # @unittest.skip("Uncomment to run")
+    def testDiscoverTestSetInstDict(self):
+        pathPrefix = '../TestSet'
+        binaryIds = loadBinaryIds(pathPrefix, None)[:10]
+        worker = AcfgWorker(pathPrefix, binaryIds)
+        worker.discoverInstDictionary('testset_inst')
 
     # @unittest.skip("Uncomment to run")
     def testWorkerRun(self):
@@ -254,7 +261,7 @@ class TestAcfgPipeline(unittest.TestCase):
             strElems = [str(x) for x in row]
             expLines.append(" ".join(strElems))
 
-        with open(pathPrefix + '/' + 'Acfg.txt') as file:
+        with open(pathPrefix + '/' + 'test.txt') as file:
             lineNum = 1
             for line in file:
                 resultLine = line.rstrip('\n')
@@ -300,6 +307,7 @@ class TestAcfgPipeline(unittest.TestCase):
             content = f.read()
             self.assertEqual(int(content), 0, '#graphs should be zero')
 
+    # @unittest.skip("Uncomment to run")
     def testValidAddrFormat(self):
         pathPrefix = '../TrainSet'
         labelPath = '../trainLabels.csv'

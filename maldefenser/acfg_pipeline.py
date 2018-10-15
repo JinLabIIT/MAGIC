@@ -3,13 +3,12 @@ import pandas as pd
 import numpy as np
 import scipy as sp
 import glog as log
-import glob
 import os
 import time
 import cfg_builder
 import threading
 from typing import List, Dict
-from dp_utils import delCodeSegLog, list2Str
+from dp_utils import delCodeSegLog, list2Str, loadBinaryIds
 
 
 class AcfgWorker(threading.Thread):
@@ -89,18 +88,7 @@ class AcfgMaster(object):
         return bId2Label
 
     def loadDefaultBinaryIds(self) -> List[str]:
-        """
-        Instead of just return bId2Label.keys(), check if binary file
-        do exist under pathPrefix directory
-        """
-        binaryIds = []
-        for path in glob.glob(self.pathPrefix + '/*.asm', recursive=False):
-            filename = path.split('/')[-1]
-            id = filename.split('.')[0]
-            binaryIds.append(id)
-            assert id in self.bId2Label
-
-        return binaryIds
+        return loadBinaryIds(self.pathPrefix, self.bId2Label)
 
     def dispatchWorkers(self, numWorkers: int) -> None:
         bIdPerWorker = len(self.binaryIds) // numWorkers
