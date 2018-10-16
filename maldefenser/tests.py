@@ -120,7 +120,6 @@ class TestCfgBuildedr(unittest.TestCase):
             'a9oIzfw03ED4lTBCt52Y',
             'fRLS3aKkijp4GH0Ds6Pv',
             '6tfw0xSL2FNHOCJBdlaA',
-            'a5btWIHhlzjuXiBykZG6',
             'd0iHC6ANYGon7myPFzBe',
             '58kxhXouHzFd4g3rmInB',
             'fyH8oWql4rg7tEJSLpIB',
@@ -136,21 +135,18 @@ class TestCfgBuildedr(unittest.TestCase):
         # VZ2rzALmJS38uIG5wR1X
         # N2TJvMjcebxGKq1YDC9k
         # xYr76sCtHa2dD48FiGkK
-        # Jmo6eIhLZ4t9r8QsxEg5
         # YvpzOeBSu7Tmia3wKlLf
         # W8VtX0E95TSzxJuGqiI4
         # uzRUIAil6dVwWsCvhbKD
         # W8aI0V7G5lFTpOgSvjf6
-        # Umr5QR0xnwialcTbWCuo
-        # vg72U6PTcfktmNDBLbqM
         # pLY05AFladXWQ9fDZnhb
         # QpHV1IWD72EnAyB3FowM
-        # PQTzfg3iRxvCNoplWetU
         delCodeSegLog()
         for bId in binaryIds:
             log.info('Processing ' + pathPrefix + '/' + bId + '.asm')
             cfgBuilder = ControlFlowGraphBuilder(bId, pathPrefix)
-            cfgBuilder.parseInstructions()
+            seenInst = cfgBuilder.parseInstructions()
+            self.assertEqual(len(seenInst), 0, "%s.asm is not empty" % bId)
 
     # @unittest.skip("Uncomment to run")
     def testEvalHexExpr(self):
@@ -205,7 +201,7 @@ class TestAcfgPipeline(unittest.TestCase):
         super(TestAcfgPipeline, self).setUp()
         # self.skipTest('Uncomment me to run this test case')
 
-    # @unittest.skip("Uncomment to run")
+    @unittest.skip("Takes about 1 day to")
     def testDiscoverInstDict(self):
         pathPrefix = '../TestSet'
         binaryIds = loadBinaryIds(pathPrefix, None)
@@ -305,7 +301,6 @@ class TestAcfgPipeline(unittest.TestCase):
             'a9oIzfw03ED4lTBCt52Y',
             'fRLS3aKkijp4GH0Ds6Pv',
             '6tfw0xSL2FNHOCJBdlaA',
-            'a5btWIHhlzjuXiBykZG6',
             'd0iHC6ANYGon7myPFzBe',
             '58kxhXouHzFd4g3rmInB',
             'fyH8oWql4rg7tEJSLpIB',

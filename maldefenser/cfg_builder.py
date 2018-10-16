@@ -81,10 +81,11 @@ class ControlFlowGraphBuilder(object):
         self.connectBlocks()
 
     def addrInCodeSegment(self, seg: str) -> str:
-        segNames = ['.text:', 'CODE:', 'UPX1:', 'seg000:', 'qmoyiu:',
-                    '.UfPOkc:', '.brick:', '.icode:', 'seg001:',
-                    '.Much:', 'iuagwws:', '.idata:', '.IqR:', '.data:',
-                    ]
+        segNames = [
+            '.text:', 'CODE:', 'UPX1:', 'seg000:', 'qmoyiu:',
+            '.UfPOkc:', '.brick:', '.icode:', 'seg001:',
+            '.Much:', 'iuagwws:', '.idata:', '.IqR:', '.data:',
+            '.unpack:', '_1:', '.Upack:', '.mF:',]
         for prefix in segNames:
             if seg.startswith(prefix) is True:
                 return seg[len(prefix):]
@@ -191,6 +192,9 @@ class ControlFlowGraphBuilder(object):
                 foundDataDeclare += inst + ' '
                 continue
             if inst.startswith('db ') or inst.find(' db ') != -1:
+                foundDataDeclare += inst + ' '
+                continue
+            if inst.startswith('dt ') or inst.find(' dt ') != -1:
                 foundDataDeclare += inst + ' '
                 continue
             if inst.startswith('unicode '):

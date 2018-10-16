@@ -251,5 +251,5 @@ class InstBuilder(object):
             log.debug(f'[InstBuilder] Create DataDef from {progLine.rstrip()}')
             return DataInst(address, operators)
         else:
-            log.warning(f'[InstBuilder] Failed on {progLine}, treat as DataDef')
+            log.warning(f'[InstBuilder] Fail on "{progLine}", treat as DataDef')
             return DataInst(address, operators)
