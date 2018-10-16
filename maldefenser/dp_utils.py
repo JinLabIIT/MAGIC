@@ -2,7 +2,8 @@
 import re
 import glob
 import glog as log
-from typing import List, Dict
+import pandas as pd
+from typing import List, Dict, Set
 
 FakeCalleeAddr = -2
 InvalidAddr = -1
@@ -125,3 +126,10 @@ def loadBinaryIds(pathPrefix: str,
             assert id in bId2Label
 
     return binaryIds
+
+def cmpInstDict(trainDictPath: str, testDictPath: str) -> Set[str]:
+    trainDf = pd.read_csv(trainDictPath, header=0, dtype={'Inst': str})
+    testDf = pd.read_csv(testDictPath, header=0, dtype={'Inst': str})
+    trainDict, testDict= set(trainDf['Inst']), set(testDf['Inst'])
+    diff = list(testDict.difference(trainDict))
+    return sorted(diff)

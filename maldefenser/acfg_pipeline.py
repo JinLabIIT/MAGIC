@@ -32,7 +32,7 @@ class AcfgWorker(threading.Thread):
     def discoverInstDictionary(self, exportTo: str) -> None:
         idCnt = len(self.binaryIds)
         for (i, bId) in enumerate(self.binaryIds):
-            log.debug(f'[DiscoverInstDict] Processing {i}/{idCnt} {bId}.asm')
+            log.debug(f'[DiscoverInstDict] Processing {i + 1}/{idCnt} {bId}.asm')
             cfgBuilder = cfg_builder.ControlFlowGraphBuilder(bId,
                                                              self.pathPrefix)
             cfgBuilder.parseInstructions()

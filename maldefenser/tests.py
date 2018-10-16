@@ -4,7 +4,8 @@ import unittest
 import time
 from cfg_builder import ControlFlowGraphBuilder, AcfgBuilder
 from acfg_pipeline import AcfgWorker, AcfgMaster
-from dp_utils import delCodeSegLog, evalHexAddSubExpr, loadBinaryIds
+from dp_utils import delCodeSegLog, evalHexAddSubExpr
+from dp_utils import loadBinaryIds, cmpInstDict
 
 
 class TestCfgBuildedr(unittest.TestCase):
@@ -114,6 +115,7 @@ class TestCfgBuildedr(unittest.TestCase):
     def testEmptyCodeSeg(self):
         pathPrefix = '../TrainSet'
         binaryIds = [
+            # Empty ones in trainset
             'da3XhOZzQEbKVtLgMYWv',
             'a9oIzfw03ED4lTBCt52Y',
             'fRLS3aKkijp4GH0Ds6Pv',
@@ -126,6 +128,24 @@ class TestCfgBuildedr(unittest.TestCase):
             'cf4nzsoCmudt1kwleOTI',
             'GXFP0dYvns5NoQtIBECf',
         ]
+        # Empty ones in testset
+        # ZOtweKduNMynmpiG4brh
+        # y5l1PF7qGvsQSDgmRkKn
+        # TroLhDaQ2qkKe4XmtPEd
+        # spRNUv6MFb8ihB9JXk5r
+        # VZ2rzALmJS38uIG5wR1X
+        # N2TJvMjcebxGKq1YDC9k
+        # xYr76sCtHa2dD48FiGkK
+        # Jmo6eIhLZ4t9r8QsxEg5
+        # YvpzOeBSu7Tmia3wKlLf
+        # W8VtX0E95TSzxJuGqiI4
+        # uzRUIAil6dVwWsCvhbKD
+        # W8aI0V7G5lFTpOgSvjf6
+        # Umr5QR0xnwialcTbWCuo
+        # vg72U6PTcfktmNDBLbqM
+        # pLY05AFladXWQ9fDZnhb
+        # QpHV1IWD72EnAyB3FowM
+        # PQTzfg3iRxvCNoplWetU
         delCodeSegLog()
         for bId in binaryIds:
             log.info('Processing ' + pathPrefix + '/' + bId + '.asm')
@@ -185,24 +205,17 @@ class TestAcfgPipeline(unittest.TestCase):
         super(TestAcfgPipeline, self).setUp()
         # self.skipTest('Uncomment me to run this test case')
 
-    @unittest.skip("Uncomment to run")
-    def testDiscoverInstDict(self):
-        pathPrefix = '../TrainSet'
-        binaryIds = [
-            'exGy3iaKJmRprdHcB0NO',
-            '0Q4ALVSRnlHUBjyOb1sw',
-            'cqdUoQDaZfGkt5ilBe7n',
-            'BKpbxgMPWUNZosdnO8Ak',
-        ]
-        worker = AcfgWorker(pathPrefix, binaryIds)
-        worker.discoverInstDictionary('testDiscoverInstDict')
-
     # @unittest.skip("Uncomment to run")
-    def testDiscoverTestSetInstDict(self):
+    def testDiscoverInstDict(self):
         pathPrefix = '../TestSet'
-        binaryIds = loadBinaryIds(pathPrefix, None)[:10]
+        binaryIds = loadBinaryIds(pathPrefix, None)
         worker = AcfgWorker(pathPrefix, binaryIds)
-        worker.discoverInstDictionary('testset_inst')
+        worker.discoverInstDictionary('TestSetInstDictionary')
+
+    def testCmpInstDict(self):
+        trainDictPath = 'InstDictionary.csv'
+        testDictPath = 'TestSetInstDictionary.csv'
+        print(cmpInstDict(trainDictPath, testDictPath))
 
     # @unittest.skip("Uncomment to run")
     def testWorkerRun(self):
