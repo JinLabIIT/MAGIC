@@ -1,5 +1,4 @@
-from __future__ import print_function
-
+#!/usr/bin/python3.7
 import os
 import sys
 import torch
@@ -7,12 +6,11 @@ import glog as log
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-from pytorch_util import weights_init
 from torch.nn.parameter import Parameter
-
 
 sys.path.append('%s/pytorch_structure2vec-master/s2v_lib'
                 % os.path.dirname(os.path.realpath(__file__)))
+from pytorch_util import weights_init
 
 
 class MLPRegression(nn.Module):

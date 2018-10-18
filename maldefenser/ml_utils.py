@@ -1,39 +1,35 @@
-from __future__ import print_function
+#!/usr/bin/python3.7
 
 import argparse
 import random
 import torch
+import math
 import numpy as np
 import glog as log
 import networkx as nx
-import cPickle as cp
+import pickle as pkl
+from typing import List, Dict, Set
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import precision_score
 from sklearn.metrics import recall_score
-# import os
-# import _pickle as cp  # python3 compatability
 
 cmd_opt = argparse.ArgumentParser(
     description='Argparser for graph_classification')
+# Execution options
 cmd_opt.add_argument('-mode', default='cpu', help='cpu/gpu')
 cmd_opt.add_argument('-gm', default='mean_field', help='mean_field/loopy_bp')
 cmd_opt.add_argument('-data', default=None, help='data folder name')
+cmd_opt.add_argument('-seed', type=int, default=1, help='seed')
+cmd_opt.add_argument('-use_cached_data', type=str, default='False',
+                     help='whether to use previously cached dataset')
+cmd_opt.add_argument('-cache_file', type=str, default='cached_graphs.pkl',
+                     help='which cached data to use')
+# Tranning options/hyperparameters
 cmd_opt.add_argument(
     '-batch_size', type=int, default=50, help='minibatch size')
-cmd_opt.add_argument('-seed', type=int, default=1, help='seed')
-cmd_opt.add_argument(
-    '-feat_dim', type=int, default=0,
-    help='dimension of discrete node feature (maximum node tag)')
-cmd_opt.add_argument('-num_class', type=int, default=0, help='#classes')
 cmd_opt.add_argument('-fold', type=int, default=1, help='fold (1..10)')
-cmd_opt.add_argument(
-    '-test_number', type=int, default=0,
-    help='if specified, will overwrite -fold and \
-    use the last -test_number graphs as testing data')
 cmd_opt.add_argument('-num_epochs', type=int, default=1000,
                      help='number of epochs')
-cmd_opt.add_argument('-latent_dim', type=str, default='64',
-                     help='dimension(s) of latent layers')
 cmd_opt.add_argument('-sortpooling_k', type=float, default=30,
                      help='number of nodes kept after SortPooling')
 cmd_opt.add_argument('-out_dim', type=int, default=1024,
@@ -48,20 +44,22 @@ cmd_opt.add_argument('-mlp_type', type=str, default='vanilla',
                      help='init learning_rate')
 cmd_opt.add_argument('-dropout', type=str, default='False',
                      help='whether add dropout after dense layer')
-cmd_opt.add_argument('-use_cached_data', type=str, default='False',
-                     help='whether to use previously cached dataset')
-cmd_opt.add_argument('-cache_file', type=str, default='cached_graphs.pkl',
-                     help='which cached data to use')
+# Inferred arguments
+cmd_opt.add_argument(
+    '-feat_dim', type=int, default=0,
+    help='dimension of discrete node feature (maximum node tag)')
+cmd_opt.add_argument('-num_class', type=int, default=0, help='#classes')
+cmd_opt.add_argument('-latent_dim', type=str, default='64',
+                     help='dimension(s) of latent layers')
 
 cmd_args, _ = cmd_opt.parse_known_args()
-
 cmd_args.latent_dim = [int(x) for x in cmd_args.latent_dim.split('-')]
 if len(cmd_args.latent_dim) == 1:
     cmd_args.latent_dim = cmd_args.latent_dim[0]
 
 cmd_args.dropout = (cmd_args.dropout == "True")
 cmd_args.use_cached_data = (cmd_args.use_cached_data == "True")
-log.info(cmd_args)
+log.info("Parsed cmdline arguments: %s" % cmd_args)
 
 
 class S2VGraph(object):
@@ -76,7 +74,7 @@ class S2VGraph(object):
         self.node_tags = node_tags
         self.label = label
         self.node_features = node_features  # np array (node_num * feature_dim)
-        self.degs = dict(g.degree).values()
+        self.degs = list(dict(g.degree).values())
 
         x, y = zip(*g.edges())
         self.num_edges = len(x)
@@ -86,8 +84,8 @@ class S2VGraph(object):
         self.edge_pairs = self.edge_pairs.flatten()
 
 
-def load_data():
-    log.info('Loading data as graphs')
+def loadData() -> List[S2VGraph]:
+    log.info('Loading data as list of S2VGraph(s)')
     g_list = []
     label_dict = {}
     feat_dict = {}
@@ -134,17 +132,15 @@ def load_data():
                 node_features = None
                 node_feature_flag = False
 
-            # (some graphs in COLLAB have self-loops, ignored here)
-            # assert len(g.edges()) * 2 == n_edges
             assert len(g) == n
             if len(g.edges()) > 0:
                 g_list.append(S2VGraph(g, l, node_tags, node_features))
+            else:
+                log.warning('[LoadData] Ignore graph having no edge')
 
     random.shuffle(g_list)
     for g in g_list:
         g.label = label_dict[g.label]
-
-    log.info('# graphs: %d' % len(g_list))
 
     cmd_args.num_class = len(label_dict)
     # maximum node label (tag)
@@ -155,37 +151,73 @@ def load_data():
     else:
         cmd_args.attr_dim = 0
 
-    log.info('# classes: %d' % cmd_args.num_class)
-    log.info('# maximum node tag: %d' % cmd_args.feat_dim)
+    if cmd_args.sortpooling_k <= 1:
+        num_nodes_list = sorted([g.num_nodes for g in g_list])
+        cmd_args.sortpooling_k = num_nodes_list[
+            int(math.ceil(cmd_args.sortpooling_k * len(num_nodes_list))) - 1
+        ]
 
-    if cmd_args.test_number == 0:
-        train_idxes = np.loadtxt('data/%s/10fold_idx/train_idx-%d.txt' %
-                                 (cmd_args.data, cmd_args.fold),
-                                 dtype=np.int32).tolist()
-        test_idxes = np.loadtxt('data/%s/10fold_idx/test_idx-%d.txt' %
-                                (cmd_args.data, cmd_args.fold),
-                                dtype=np.int32).tolist()
-        return [g_list[i] for i in train_idxes], \
-            [g_list[i] for i in test_idxes]
+    log.info(f'# graphs: {len(g_list)}')
+    log.info(f'# classes: {cmd_args.num_class}')
+    log.info(f'maximum # node tag: {cmd_args.feat_dim}')
+    log.info(f'node attributes dimension: {cmd_args.attr_dim}')
+    log.info(f'k used in SortPooling is: {cmd_args.sortpooling_k}')
+
+    return g_list
+
+
+def loadGraphsMayCache() -> List[S2VGraph]:
+    """ Enhance loadData() with caching. """
+    cached_filename = cmd_args.cache_file
+    if cmd_args.use_cached_data:
+        log.info(f"Loading cached dataset from {cached_filename}")
+        cache_file = open(cached_filename, 'rb')
+        dataset = pkl.load(cache_file)
+        cmd_args.num_class = dataset['num_class']
+        cmd_args.feat_dim = dataset['feat_dim']
+        cmd_args.attr_dim = dataset['attr_dim']
+        graphs = dataset['graphs']
+        cache_file.close()
     else:
-        return g_list[: len(g_list) - cmd_args.test_number], \
-            g_list[len(g_list) - cmd_args.test_number:]
+        graphs = loadData()
+        log.info(f"Dumping cached dataset to {cached_filename}")
+        cache_file = open(cached_filename, 'wb')
+        dataset = {}
+        dataset['num_class'] = cmd_args.num_class
+        dataset['feat_dim'] = cmd_args.feat_dim
+        dataset['attr_dim'] = cmd_args.attr_dim
+        dataset['graphs'] = list(graphs)
+        pkl.dump(dataset, cache_file)
+        cache_file.close()
+
+    return graphs
 
 
-def compute_pr_scores(pred, labels, prefix):
+def kFoldSplit(k: int, graphs: List[S2VGraph]) -> List[List[S2VGraph]]:
+    results = []
+    share = math.ceil(len(graphs) / k)
+    for i in range(k):
+        start = i * share
+        end = min((i + 1) * share, len(graphs))
+        results.append(graphs[start: end])
+        log.info(f'Fold {i + 1} range from {start} to {end - 1}')
+
+    return results
+
+def computePrScores(pred, labels, prefix):
     scores = {}
     scores['precisions'] = precision_score(labels, pred, average=None)
     scores['recalls'] = recall_score(labels, pred, average=None)
     return scores
 
 
-def store_confusion_matrix(pred, labels, prefix):
+def storeConfusionMatrix(pred, labels, prefix):
     cm = confusion_matrix(labels, pred)
     np.savetxt('%s_%s_confusion_matrix.txt' % (cmd_args.data, prefix), cm,
                fmt='%4d', delimiter=' ')
 
 
-def store_embedding(classifier, graphs, prefix, sample_size=100):
+def storeEmbedding(classifier, graphs, prefix, sample_size=100):
     if len(graphs) > sample_size:
         sample_idx = np.random.randint(0, len(graphs), sample_size)
         graphs = [graphs[i] for i in sample_idx]
@@ -199,7 +231,7 @@ def store_embedding(classifier, graphs, prefix, sample_size=100):
                labels, fmt='%d')
 
 
-def balanced_sampling(graphs, neg_ratio=3):
+def balancedSampling(graphs, neg_ratio=3):
     graph_labels = np.array([g.label for g in graphs])
     pos_indices = np.where(graph_labels == 1)[0]
     neg_indices = np.where(graph_labels == 0)[0]
@@ -215,49 +247,6 @@ def balanced_sampling(graphs, neg_ratio=3):
     return sampled
 
 
-def load_graphs_may_cache():
-    cached_filename = cmd_args.cache_file
-    if cmd_args.use_cached_data:
-        log.info("Loading cached dataset from %s" % cached_filename)
-        cache_file = open(cached_filename, 'rb')
-        dataset = cp.load(cache_file)
-        cmd_args.num_class = dataset['num_class']
-        cmd_args.feat_dim = dataset['feat_dim']
-        cmd_args.attr_dim = dataset['attr_dim']
-        train_graphs = dataset['train_graphs']
-        test_graphs = dataset['test_graphs']
-        cache_file.close()
-    else:
-        train_graphs, test_graphs = load_data()
-        log.info("Dumping cached dataset from %s" % cached_filename)
-        cache_file = open(cached_filename, 'wb')
-        dataset = {}
-        dataset['num_class'] = cmd_args.num_class
-        dataset['feat_dim'] = cmd_args.feat_dim
-        dataset['attr_dim'] = cmd_args.attr_dim
-        dataset['train_graphs'] = train_graphs
-        dataset['test_graphs'] = test_graphs
-        cp.dump(dataset, cache_file)
-        cache_file.close()
-
-    return train_graphs, test_graphs
-
-
-def fair_sample_prob(indices, labels):
-    """
-    sample_prob[ith elem] is proportional to 1 / prob[ith elem's label]
-    """
-    hist, _ = np.histogram(labels, bins=np.arange(max(labels) + 2),
-                           density=False)
-    dist, _ = np.histogram(labels, bins=np.arange(max(labels) + 2),
-                           density=True)
-    sample_prob = [1 / x for x in dist]
-    sample_prob = [x / sum(sample_prob) for x in sample_prob]  # normalize
-    ret = [sample_prob[x] / hist[x] for x in labels]
-
-    return ret
-
-
-def to_onehot(indices, num_classes):
+def toOnehot(indices, num_classes):
     onehot = torch.zeros(indices.size(0), num_classes, device=indices.device)
     return onehot.scatter_(1, indices.unsqueeze(1), 1)

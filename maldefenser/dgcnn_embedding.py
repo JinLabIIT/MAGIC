@@ -1,5 +1,4 @@
-from __future__ import print_function
-
+#!/usr/bin/python3.7
 import os
 import sys
 import glog as log
