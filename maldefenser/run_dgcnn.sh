@@ -2,23 +2,12 @@
 
 # input arguments
 DATA="${1-SMALLACFG}"
-fold=${2-1}  # which fold as testing data
-test_number=${3-0}  # if specified, use the last test_number graphs as test data
 
 # general settings
 gm=DGCNN  # model
 gpu_or_cpu=gpu
 GPU=1  # select the GPU number, 0-3
-CONV_SIZE="32-32-32-1"
-sortpooling_k=0.6  # If k <= 1, then k is set to an integer so that k% of graphs have nodes less than this integer
-FP_LEN=0  # final dense layer's input dimension, decided by data
-n_hidden=128  # final dense layer's hidden size
 mlp_type=vanilla # rap or vanilla
-
-bsize=40  # batch size
-num_epochs=400
-learning_rate=0.0001
-dropout=True
 cache_file=cached_msacfg_graphs.pkl
 
 # dataset-specific settings
@@ -43,22 +32,8 @@ esac
 CUDA_VISIBLE_DEVICES=${GPU} python3.7 cross_valid.py \
   -seed 1 \
   -data ${DATA} \
-  -fold ${fold} \
-  -learning_rate ${learning_rate} \
-  -num_epochs ${num_epochs} \
-  -hidden ${n_hidden} \
-  -latent_dim ${CONV_SIZE} \
-  -sortpooling_k ${sortpooling_k} \
-  -out_dim ${FP_LEN} \
-  -batch_size ${bsize} \
   -gm $gm \
   -mode ${gpu_or_cpu} \
   -mlp_type ${mlp_type} \
-  -dropout ${dropout} \
   -use_cached_data ${use_cached_data} \
-  -cache_file ${cache_file} \
-  -test_number ${test_number}
-echo "Train confusion matrix:"
-cat ${DATA}_train_confusion_matrix.txt
-echo "Valid confusion matrix:"
-cat ${DATA}_valid_confusion_matrix.txt
+  -cache_file ${cache_file}

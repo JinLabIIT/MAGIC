@@ -7,7 +7,7 @@ import torch.nn as nn
 from dgcnn_embedding import DGCNN
 from mlp_dropout import MLPClassifier, RecallAtPrecision
 from embedding import EmbedMeanField, EmbedLoopyBP
-from ml_utils import cmd_args
+from ml_utils import cmd_args, gHP
 
 
 class Classifier(nn.Module):
@@ -24,36 +24,36 @@ class Classifier(nn.Module):
             sys.exit()
 
         if cmd_args.gm == 'DGCNN':
-            self.s2v = model(latent_dim=cmd_args.latent_dim,
-                             output_dim=cmd_args.out_dim,
-                             num_node_feats=(cmd_args.feat_dim +
-                                             cmd_args.attr_dim),
+            self.s2v = model(latent_dim=gHP['convSize'],
+                             output_dim=gHP['s2vOutDim'],
+                             num_node_feats=(gHP['featureDim'] +
+                                             gHP['nodeTagDim']),
                              num_edge_feats=0,
-                             k=cmd_args.sortpooling_k)
+                             k=gHP['sortPoolingK'])
         else:
-            self.s2v = model(latent_dim=cmd_args.latent_dim,
-                             output_dim=cmd_args.out_dim,
-                             num_node_feats=cmd_args.feat_dim,
+            self.s2v = model(latent_dim=gHP['convSize'],
+                             output_dim=gHP['s2vOutDim'],
+                             num_node_feats=gHP['featureDim'],
                              num_edge_feats=0,
-                             max_lv=cmd_args.max_lv)
+                             max_lv=gHP['msgPassLv'])
 
-        out_dim = cmd_args.out_dim
-        if out_dim == 0:
-            if cmd_args.gm == 'DGCNN':
-                out_dim = self.s2v.dense_dim
-            else:
-                out_dim = cmd_args.latent_dim
+        # out_dim = gHP['s2vOutDim']
+        # if out_dim == 0:
+        #     if cmd_args.gm == 'DGCNN':
+        #         out_dim = self.s2v.dense_dim
+        #     else:
+        #         out_dim = cmd_args.latent_dim
 
         if cmd_args.mlp_type == 'rap':
-            self.mlp = RecallAtPrecision(input_size=out_dim,
-                                         hidden_size=cmd_args.hidden,
+            self.mlp = RecallAtPrecision(input_size=gHP['s2vOutDim'],
+                                         hidden_size=gHP['regHidden'],
                                          alpha=0.6,
-                                         with_dropout=cmd_args.dropout)
+                                         with_dropout=gHP['dropOutRate'])
         else:
-            self.mlp = MLPClassifier(input_size=out_dim,
-                                     hidden_size=cmd_args.hidden,
-                                     num_class=cmd_args.num_class,
-                                     with_dropout=cmd_args.dropout)
+            self.mlp = MLPClassifier(input_size=gHP['s2vOutDim'],
+                                     hidden_size=gHP['regHidden'],
+                                     num_class=gHP['numClasses'],
+                                     with_dropout=gHP['dropOutRate'])
 
     def _prepareFeatureLabel(self, batch_graph):
         labels = torch.LongTensor(len(batch_graph))
@@ -77,13 +77,14 @@ class Classifier(nn.Module):
             if node_tag_flag is True:
                 concat_tag += batch_graph[i].node_tags
             if node_feat_flag is True:
+                print(batch_graph[i].node_features)
                 tmp = torch.from_numpy(
                     batch_graph[i].node_features).type('torch.FloatTensor')
                 concat_feat.append(tmp)
 
         if node_tag_flag is True:
             concat_tag = torch.LongTensor(concat_tag).view(-1, 1)
-            node_tag = torch.zeros(n_nodes, cmd_args.feat_dim)
+            node_tag = torch.zeros(n_nodes, gHP['nodeTagDim'])
             node_tag.scatter_(1, concat_tag, 1)
 
         if node_feat_flag is True:

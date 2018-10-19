@@ -6,7 +6,7 @@ from cfg_builder import ControlFlowGraphBuilder, AcfgBuilder
 from acfg_pipeline import AcfgWorker, AcfgMaster
 from dp_utils import delCodeSegLog, evalHexAddSubExpr
 from dp_utils import loadBinaryIds, cmpInstDict
-
+from hyperparameters import HyperParameterIterator
 
 class TestCfgBuildedr(unittest.TestCase):
     def setUp(self):
@@ -347,6 +347,17 @@ class TestAcfgRunningTime(unittest.TestCase):
         master2.dispatchWorkers(8)
         runtime2 = time.process_time() - start
         log.info(f'Running time of 8-thread: {runtime2} seconds')
+
+
+class TestHpyerParameterIterator(unittest.TestCase):
+    def testIterator(self):
+        cnt = 0
+        iter = HyperParameterIterator()
+        for hyperparameter in iter:
+            log.info(hyperparameter)
+            cnt += 1
+
+        self.assertEqual(cnt, iter.getLimit(), '#hyper-combination returned')
 
 
 if __name__ == '__main__':
