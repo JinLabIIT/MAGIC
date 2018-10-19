@@ -37,13 +37,6 @@ class Classifier(nn.Module):
                              num_edge_feats=0,
                              max_lv=gHP['msgPassLv'])
 
-        # out_dim = gHP['s2vOutDim']
-        # if out_dim == 0:
-        #     if cmd_args.gm == 'DGCNN':
-        #         out_dim = self.s2v.dense_dim
-        #     else:
-        #         out_dim = cmd_args.latent_dim
-
         if cmd_args.mlp_type == 'rap':
             self.mlp = RecallAtPrecision(input_size=gHP['s2vOutDim'],
                                          hidden_size=gHP['regHidden'],
@@ -77,7 +70,6 @@ class Classifier(nn.Module):
             if node_tag_flag is True:
                 concat_tag += batch_graph[i].node_tags
             if node_feat_flag is True:
-                print(batch_graph[i].node_features)
                 tmp = torch.from_numpy(
                     batch_graph[i].node_features).type('torch.FloatTensor')
                 concat_feat.append(tmp)

@@ -3,37 +3,26 @@ from typing import Dict, List
 from copy import deepcopy
 
 
-batchSize = range(40, 81, 40)
-cvFold = [5]
-numEpochs = [2]
-sortPoolingRatio = [0.6]
-s2vOutDim = range(100, 201, 200)
-regHidden = range(100, 201, 200)
-msgPassLv = range(2, 5, 4)
-lr = [0.00012]
-dropOutRate = [0.0, 0.4]
-convSize = [[32, 32, 32, 1]]
-
-
 class HyperParameterIterator(object):
-    def __init__(self) -> None:
-        self.hp = {
-            'batchSize': batchSize,
-            'cvFold': cvFold,
-            'numEpochs': numEpochs,
-            'sortPoolingRatio': sortPoolingRatio,
-            's2vOutDim': s2vOutDim,
-            'regHidden': regHidden,
-            'msgPassLv': msgPassLv,
-            'lr': lr,
-            'dropOutRate': dropOutRate,
-            'convSize': convSize,
-        }
+    def __init__(self, hpPath) -> None:
+        self.hp = self._loadHyperParameters(hpPath)
+        log.debug(f'Hyperparameter atomic values: {self.hp}')
         self.combinations = self.recursive(deepcopy(self.hp))
         log.info(f'#Combinations = {len(self.combinations)}')
-        log.info(f'#limit = {self.getLimit()}')
+        log.debug(f'#limit = {self.getLimit()}')
         assert len(self.combinations) == self.getLimit()
         self.curr = 0
+
+    def _loadHyperParameters(self, hpPath: str) -> Dict[str, List[float]]:
+        result = {}
+        with open(hpPath, 'r') as f:
+            for line in f:
+                item1, item2 = line.split('=')
+                name = item1.lstrip(' ').rstrip(' ')
+                value = item2.lstrip(' ').rstrip(' ')
+                result[name] = eval(value)
+
+        return result
 
     def getLimit(self) -> int:
         limit = 1

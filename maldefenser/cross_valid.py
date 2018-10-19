@@ -160,7 +160,7 @@ if __name__ == '__main__':
     data_ready_time = time.process_time() - start_time
     log.info('Dataset ready takes %.2fs' % data_ready_time)
 
-    for (id, hp) in enumerate(HyperParameterIterator()):
+    for (id, hp) in enumerate(HyperParameterIterator(cmd_args.hp_path)):
         for (key, val) in hp.items():
             gHP[key] = val
 

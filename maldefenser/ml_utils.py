@@ -23,8 +23,10 @@ cmd_opt.add_argument('-mlp_type', type=str, default='vanilla',
                      help='Type of regression MLP: RAP or vanilla')
 cmd_opt.add_argument('-use_cached_data', type=str, default='False',
                      help='whether to use previously cached dataset')
-cmd_opt.add_argument('-cache_file', type=str, default='cached_graphs.pkl',
+cmd_opt.add_argument('-cache_path', type=str, default='cached_graphs.pkl',
                      help='which cached data to use')
+cmd_opt.add_argument('-hp_path', type=str, default='hp.txt',
+                     help='raw hyperparameter values')
 gHP = dict()
 cmd_args, _ = cmd_opt.parse_known_args()
 cmd_args.use_cached_data = (cmd_args.use_cached_data == "True")
@@ -116,39 +118,39 @@ def loadData() -> List[S2VGraph]:
     gHP['numClasses'] = len(labelDict)
     gHP['nodeTagDim'] = len(tagDict)
     gHP['featureDim'] = 0
-    if nodeFeatures is True:
+    if nodeFeatures is not None:
         gHP['featureDim'] = nodeFeatures.shape[1]
 
     log.info(f'# graphs: {len(gList)}')
     log.info(f'# classes: {gHP["numClasses"]}')
     log.info(f'node tag dimension: {gHP["nodeTagDim"]}')
-    log.info(f'node attributes dimension: {gHP["featureDim"]}')
+    log.info(f'node feature dimension: {gHP["featureDim"]}')
     return gList
 
 
 def loadGraphsMayCache() -> List[S2VGraph]:
     """ Enhance loadData() with caching. """
-    cached_filename = cmd_args.cache_file
+    cachePath = cmd_args.cache_path
     if cmd_args.use_cached_data:
-        log.info(f"Loading cached dataset from {cached_filename}")
-        cache_file = open(cached_filename, 'rb')
-        dataset = pkl.load(cache_file)
+        log.info(f"Loading cached dataset from {cachePath}")
+        cacheFile = open(cachePath, 'rb')
+        dataset = pkl.load(cacheFile)
         gHP['numClasses'] = dataset['numClasses']
         gHP['featureDim'] = dataset['featureDim']
         gHP['nodeTagDim'] = dataset['nodeTagDim']
         graphs = dataset['graphs']
-        cache_file.close()
+        cacheFile.close()
     else:
         graphs = loadData()
-        log.info(f"Dumping cached dataset to {cached_filename}")
-        cache_file = open(cached_filename, 'wb')
+        log.info(f"Dumping cached dataset to {cachePath}")
+        cacheFile = open(cachePath, 'wb')
         dataset = {}
         dataset['numClasses'] = gHP['numClasses']
         dataset['featureDim'] = gHP['featureDim']
         dataset['nodeTagDim'] = gHP['nodeTagDim']
         dataset['graphs'] = list(graphs)
-        pkl.dump(dataset, cache_file)
-        cache_file.close()
+        pkl.dump(dataset, cacheFile)
+        cacheFile.close()
 
     return graphs
 
