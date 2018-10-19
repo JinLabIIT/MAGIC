@@ -55,7 +55,7 @@ class S2VGraph(object):
         self.edge_pairs = self.edge_pairs.flatten()
 
 
-def loadData() -> List[S2VGraph]:
+def loadData(isTestSet: bool = False) -> List[S2VGraph]:
     log.info('Loading data as list of S2VGraph(s)')
     gList: List[S2VGraph] = []
     labelDict: Dict[str, int] = {} # mapping label to 0-based int
@@ -65,8 +65,11 @@ def loadData() -> List[S2VGraph]:
     numGraphs = int(f.readline().strip())
     for i in range(numGraphs):
         row = f.readline().strip().split()
-        numNodes, label = [int(w) for w in row]
-        if label not in labelDict:
+        numNodes, label = int(row[0]), row[1]
+        if not isTestSet:
+            label = int(row[1])
+
+        if label != '?' and label not in labelDict:
             mapped = len(labelDict)
             labelDict[label] = mapped
 
@@ -113,7 +116,7 @@ def loadData() -> List[S2VGraph]:
 
     random.shuffle(gList)
     for g in gList:
-        g.label = labelDict[g.label]
+        g.label = None if isTestSet else labelDict[g.label]
 
     gHP['numClasses'] = len(labelDict)
     gHP['nodeTagDim'] = len(tagDict)
@@ -128,7 +131,7 @@ def loadData() -> List[S2VGraph]:
     return gList
 
 
-def loadGraphsMayCache() -> List[S2VGraph]:
+def loadGraphsMayCache(isTestSet: bool = False) -> List[S2VGraph]:
     """ Enhance loadData() with caching. """
     cachePath = cmd_args.cache_path
     if cmd_args.use_cached_data:

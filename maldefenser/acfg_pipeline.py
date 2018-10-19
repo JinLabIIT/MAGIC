@@ -63,15 +63,19 @@ class AcfgMaster(object):
 
     def __init__(self,
                  pathPrefix: str,
-                 labelPath: str,
+                 labelPath: str = None,
                  outputTxtName: str = 'ACFG',
                  binaryIds: List[str] = None) -> None:
         super(AcfgMaster, self).__init__()
         self.pathPrefix = pathPrefix
-        self.labelPath = labelPath
         self.outputTxtName = outputTxtName
         delCodeSegLog()
-        self.bId2Label: Dict[str, str] = self.loadLabel()
+        if labelPath is not None:
+            self.labelPath = labelPath
+            self.bId2Label: Dict[str, str] = self.loadLabel()
+        else:
+            self.bId2Label = None
+
         if binaryIds is None:
             self.binaryIds: List[str] = self.loadDefaultBinaryIds()
             # self.binaryIds = self.binaryIds[:10]
@@ -132,7 +136,11 @@ class AcfgMaster(object):
         output.write("%d\n" % numBinaries)
         for (b, bId) in enumerate(self.binaryIds):
             log.debug(f"[AggrDgcnnFormat] Processing {b + 1}th/{numBinaries} ACFG")
-            label = self.bId2Label[bId]
+            if self.bId2Label is not None:
+                label = self.bId2Label[bId]
+            else:
+                label = '?'
+
             features = self.bId2Worker[bId].featureMatrices[bId]
             spAdjacentMat = self.bId2Worker[bId].adjMatrices[bId]
             if features is None or spAdjacentMat is None:
@@ -166,13 +174,27 @@ class AcfgMaster(object):
         log.debug(f"[ClearTmpFiles] {len(self.binaryIds)} files removed ****")
 
 
-if __name__ == '__main__':
-    log.setLevel("INFO")
+def processTrainSet():
     pathPrefix = '../TrainSet'
     labelPath = '../trainLabels.csv'
-    master = AcfgMaster(pathPrefix, labelPath)
+    master = AcfgMaster(pathPrefix, labelPath, outputTxtName='ACFG_TRAIN')
 
     start = time.process_time()
     master.dispatchWorkers(1)
     runtime = time.process_time() - start
-    log.info(f'Running time of 1-thread: {runtime} seconds')
+    log.info(f'Running time of processing TrainSet: {runtime} seconds')
+
+
+def processTestSet():
+    pathPrefix = '../TestSet'
+    master = AcfgMaster(pathPrefix, labelPath=None, outputTxtName='ACFG_TEST')
+
+    start = time.process_time()
+    master.dispatchWorkers(1)
+    runtime = time.process_time() - start
+    log.info(f'Running time of processing TestSet: {runtime} seconds')
+
+
+if __name__ == '__main__':
+    log.setLevel("INFO")
+    processTestSet()

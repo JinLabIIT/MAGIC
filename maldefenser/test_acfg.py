@@ -292,6 +292,19 @@ class TestAcfgPipeline(unittest.TestCase):
                             'TestMasterDispatch', binaryIds)
         master.dispatchWorkers(4)
 
+    def testMasterTestSet(self):
+        pathPrefix = '../TestSet'
+        labelPath = None
+        binaryIds = [
+            'mkJhUOLaM2BnXG3S4cb5',
+            'OuCDNHRltBVZJGzv4KI8',
+            'R1hJ8LGFtZj35BlNxm7q',
+            'tdsNQiObHye2g1JfoB84',
+        ]
+        master = AcfgMaster(pathPrefix, labelPath,
+                            'TestMasterTestSet', binaryIds)
+        master.dispatchWorkers(1)
+
     # @unittest.skip("Uncomment to run")
     def testIfSkipEmptyCfgs(self):
         pathPrefix = '../TrainSet'
