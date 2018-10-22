@@ -4,20 +4,24 @@ import random
 import torch
 import math
 import numpy as np
+import pandas as pd
 import glog as log
 import networkx as nx
 import pickle as pkl
 from typing import List, Dict, Set
 from sklearn.metrics import confusion_matrix
-from sklearn.metrics import precision_score
-from sklearn.metrics import recall_score
+from sklearn.metrics import precision_score, recall_score, f1_score
 
 cmd_opt = argparse.ArgumentParser(
     description='Argparser for graph_classification')
 # Execution options
 cmd_opt.add_argument('-mode', default='cpu', help='cpu/gpu')
 cmd_opt.add_argument('-gm', default='mean_field', help='mean_field/loopy_bp')
-cmd_opt.add_argument('-data', default=None, help='data folder name')
+cmd_opt.add_argument('-data', default=None, help='txt data name')
+cmd_opt.add_argument('-train_dir', default='../TrainSet',
+                     help='folder for trainset')
+cmd_opt.add_argument('-test_dir', default='../TestSet',
+                     help='folder for testset')
 cmd_opt.add_argument('-seed', type=int, default=1, help='seed')
 cmd_opt.add_argument('-mlp_type', type=str, default='vanilla',
                      help='Type of regression MLP: RAP or vanilla')
@@ -34,13 +38,14 @@ log.info("Parsed cmdline arguments: %s" % cmd_args)
 
 
 class S2VGraph(object):
-    def __init__(self, g, label, node_tags=None, node_features=None):
+    def __init__(self, binaryId, g, label, node_tags=None, node_features=None):
         """
         g: a networkx graph
         label: an integer graph label
         node_tags: a list of integer node tags
         node_features: a numpy array of continuous node features
         """
+        self.bId = binaryId
         self.num_nodes = len(node_tags)
         self.node_tags = node_tags
         self.label = label
@@ -55,14 +60,18 @@ class S2VGraph(object):
         self.edge_pairs = self.edge_pairs.flatten()
 
 
-def loadData(isTestSet: bool = False) -> List[S2VGraph]:
+def loadData(dataDir: str, isTestSet: bool = False) -> List[S2VGraph]:
     log.info('Loading data as list of S2VGraph(s)')
     gList: List[S2VGraph] = []
     labelDict: Dict[str, int] = {} # mapping label to 0-based int
     tagDict: Dict[str, int] = {}   # mapping node tag to 0-based int
 
-    f = open('data/%s/%s.txt' % (cmd_args.data, cmd_args.data), 'r')
+    f = open('%s/%s.txt' % (dataDir, cmd_args.data), 'r')
     numGraphs = int(f.readline().strip())
+
+    orderedBid = pd.read_csv('%s/BinaryId.csv' % dataDir)['BinaryId']
+    assert orderedBid.shape[0] == numGraphs
+
     for i in range(numGraphs):
         row = f.readline().strip().split()
         numNodes, label = int(row[0]), row[1]
@@ -110,11 +119,10 @@ def loadData(isTestSet: bool = False) -> List[S2VGraph]:
 
         assert g.number_of_nodes() == numNodes
         if g.number_of_edges() > 0:
-            gList.append(S2VGraph(g, label, nodeTags, nodeFeatures))
+            gList.append(S2VGraph(orderedBid[i], g, label, nodeTags, nodeFeatures))
         else:
             log.warning('[LoadData] Ignore graph having no edge')
 
-    random.shuffle(gList)
     for g in gList:
         g.label = None if isTestSet else labelDict[g.label]
 
@@ -131,7 +139,7 @@ def loadData(isTestSet: bool = False) -> List[S2VGraph]:
     return gList
 
 
-def loadGraphsMayCache(isTestSet: bool = False) -> List[S2VGraph]:
+def loadGraphsMayCache(dataDir: str, isTestSet: bool = False) -> List[S2VGraph]:
     """ Enhance loadData() with caching. """
     cachePath = cmd_args.cache_path
     if cmd_args.use_cached_data:
@@ -144,7 +152,7 @@ def loadGraphsMayCache(isTestSet: bool = False) -> List[S2VGraph]:
         graphs = dataset['graphs']
         cacheFile.close()
     else:
-        graphs = loadData()
+        graphs = loadData(dataDir)
         log.info(f"Dumping cached dataset to {cachePath}")
         cacheFile = open(cachePath, 'wb')
         dataset = {}
@@ -171,8 +179,9 @@ def kFoldSplit(k: int, graphs: List[S2VGraph]) -> List[List[S2VGraph]]:
 
 def computePrScores(pred, labels, prefix) -> Dict[str, float]:
     scores = {}
-    scores['precisions'] = precision_score(labels, pred, average=None)
-    scores['recalls'] = recall_score(labels, pred, average=None)
+    scores['precisions'] = precision_score(labels, pred, average='weighted')
+    scores['recalls'] = recall_score(labels, pred, average='weighted')
+    scores['weightedF1'] = f1_score(labels, pred, average='weighted')
     return scores
 
 

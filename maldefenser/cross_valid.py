@@ -9,49 +9,11 @@ import glog as log
 import numpy as np
 import pandas as pd
 import torch.optim as optim
-import torch.nn as nn
-from tqdm import tqdm
-from dgcnn_embedding import DGCNN
-from mlp_dropout import MLPClassifier, RecallAtPrecision
-from embedding import EmbedMeanField, EmbedLoopyBP
-from ml_utils import cmd_args, gHP, storeConfusionMatrix
+from typing import Dict, List
+from ml_utils import cmd_args, gHP, S2VGraph
 from ml_utils import computePrScores, loadGraphsMayCache, kFoldSplit
-from e2e_model import Classifier
-from hyperparameters import HyperParameterIterator
-
-
-def loopDataset(g_list, classifier, sampleIndices, optimizer=None):
-    bsize = gHP['batchSize']
-    total_score = []
-    numGiven = len(sampleIndices)
-    total_iters = math.ceil(numGiven / bsize)
-    pbar = tqdm(range(total_iters), unit='batch')
-
-    numUsed = 0
-    all_pred = []
-    all_label = []
-    for pos in pbar:
-        end = min((pos + 1) * bsize, numGiven)
-        batch_indices = sampleIndices[pos * bsize: end]
-        batch_graph = [g_list[idx] for idx in batch_indices]
-        if classifier.training:
-            classifier.sgdModel(optimizer, batch_graph, pos)
-
-        loss, acc, pred = classifier(batch_graph)
-        all_pred.extend(pred.data.cpu().numpy().tolist())
-        all_label.extend([g.label for g in batch_graph])
-        loss = loss.data.cpu().numpy()
-        pbar.set_description('loss: %0.5f acc: %0.5f' % (loss, acc))
-        total_score.append(np.array([loss, acc]))
-        numUsed += len(batch_indices)
-
-    if numUsed != numGiven:
-        log.warning(f"{numUsed} of {numGiven} cases used trainning/validating.")
-
-    classifier.mlp.print_result_dict()
-    total_score = np.array(total_score)
-    avg_score = np.mean(np.array(total_score), 0)
-    return avg_score, all_pred, all_label
+from e2e_model import Classifier, loopDataset
+from hyperparameters import HyperParameterIterator, parseHpTuning
 
 
 def trainThenValid(trainGraphs, validGraphs):
@@ -67,6 +29,8 @@ def trainThenValid(trainGraphs, validGraphs):
     trainAccuHist, validAccuHist = [], []
     trainPrecHist, validPrecHist = [], []
     trainRecallHist, validRecallHist = [], []
+    trainF1Hist, validF1Hist = [], []
+
     startTime = time.process_time()
 
     for epoch in range(gHP['numEpochs']):
@@ -76,12 +40,13 @@ def trainThenValid(trainGraphs, validGraphs):
             trainGraphs, classifier, trainIndices, optimizer=optimizer)
         prScore = computePrScores(trainPred, trainLabels, 'train')
         print('\033[92mTrain epoch %d: l %.5f a %.5f p %.5f r %.5f\033[0m' %
-              (epoch, avgScore[0], avgScore[1], prScore['precisions'][1],
-               prScore['recalls'][1]))
+              (epoch, avgScore[0], avgScore[1], prScore['precisions'],
+               prScore['recalls']))
         trainLossHist.append(avgScore[0])
         trainAccuHist.append(avgScore[1])
-        trainPrecHist.append(prScore['precisions'][1])
-        trainRecallHist.append(prScore['recalls'][1])
+        trainPrecHist.append(prScore['precisions'])
+        trainRecallHist.append(prScore['recalls'])
+        trainF1Hist.append(prScore['weightedF1'])
 
         classifier.eval()
         validScore, validPred, validLabels = loopDataset(
@@ -89,11 +54,12 @@ def trainThenValid(trainGraphs, validGraphs):
         prScore = computePrScores(validPred, validLabels, 'valid')
         print('\033[93mValid epoch %d: l %.5f a %.5f p %.5f r %.5f\033[0m' %
               (epoch, validScore[0], validScore[1],
-               prScore['precisions'][1], prScore['recalls'][1]))
+               prScore['precisions'], prScore['recalls']))
         validLossHist.append(validScore[0])
         validAccuHist.append(validScore[1])
-        validPrecHist.append(prScore['precisions'][1])
-        validRecallHist.append(prScore['recalls'][1])
+        validPrecHist.append(prScore['precisions'])
+        validRecallHist.append(prScore['recalls'])
+        validF1Hist.append(prScore['weightedF1'])
 
     log.info(f'Net training time = {time.process_time() - startTime} seconds')
     hist = {}
@@ -101,16 +67,19 @@ def trainThenValid(trainGraphs, validGraphs):
     hist['TrainAccu'] = trainAccuHist
     hist['TrainPrec'] = trainPrecHist
     hist['TrainRecl'] = trainRecallHist
+    hist['TrainF1'] = trainF1Hist
     hist['ValidLoss'] = validLossHist
     hist['ValidAccu'] = validAccuHist
     hist['ValidPrec'] = validPrecHist
     hist['ValidRecl'] = validRecallHist
+    hist['ValidF1'] = validF1Hist
     return hist
 
 
-def averageMetrics(metrics):
+def averageMetrics(kFoldHis: List[Dict[str, List[float]]]) -> Dict[str, float]:
+    """Avg over k-fold training history"""
     result = {}
-    for history in metrics:
+    for history in kFoldHis:
         for (name, value) in history.items():
             if name in result:
                 result[name] = result[name] + np.array(value)
@@ -120,13 +89,13 @@ def averageMetrics(metrics):
     avgResult = {}
     for (name, seq) in result.items():
         avgName = 'Avg' + name
-        avgResult[avgName] = result[name] / float(len(metrics))
-        log.debug(f'{avgName} = {avgResult[avgName]}')
+        avgResult[avgName] = result[name] / float(len(kFoldHis))
+        log.info(f'{avgName} = {avgResult[avgName]}')
 
     return avgResult
 
 
-def crossValidate(graphFolds, rid: int):
+def crossValidate(graphFolds: List[List[S2VGraph]], runId: int) -> None:
     cvMetrics = []
     for f in range(len(graphFolds)):
         log.info(f'Start {f + 1}th cross validation tranning')
@@ -142,7 +111,7 @@ def crossValidate(graphFolds, rid: int):
 
     avgMetrics = averageMetrics(cvMetrics)
     df = pd.DataFrame.from_dict(avgMetrics)
-    histFile = open('%sRun%s.hist' % (cmd_args.data, rid), 'w')
+    histFile = open('%sRun%s.hist' % (cmd_args.data, runId), 'w')
     histFile.write("# %s\n" % str(gHP))
     df.to_csv(histFile, index_label='Epoch', float_format='%.6f')
     histFile.close()
@@ -155,10 +124,10 @@ if __name__ == '__main__':
     np.random.seed(cmd_args.seed)
     torch.manual_seed(cmd_args.seed)
 
-    start_time = time.process_time()
-    graphs = loadGraphsMayCache()
-    data_ready_time = time.process_time() - start_time
-    log.info('Dataset ready takes %.2fs' % data_ready_time)
+    startTime = time.process_time()
+    graphs = loadGraphsMayCache(cmd_args.train_dir)
+    dataReadyTime = time.process_time() - startTime
+    log.info('Dataset ready takes %.2fs' % dataReadyTime)
 
     for (id, hp) in enumerate(HyperParameterIterator(cmd_args.hp_path)):
         for (key, val) in hp.items():
@@ -171,3 +140,6 @@ if __name__ == '__main__':
 
         kFoldGraphs = kFoldSplit(gHP['cvFold'], graphs)
         crossValidate(kFoldGraphs, id)
+
+    optHp = parseHpTuning(cmd_args.data)
+    log.info(f'Optimal hyperparameter setting: {optHp}')

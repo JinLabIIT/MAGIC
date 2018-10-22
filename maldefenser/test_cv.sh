@@ -8,24 +8,14 @@ gm=DGCNN  # model
 gpu_or_cpu=gpu
 mlp_type=vanilla # rap or vanilla
 cache_path=cached_${DATA,,}_graphs.pkl
-hp_path=train_once_hp.txt
-
-# dataset-specific settings
-case ${DATA} in
-MSACFG)
-  use_cached_data=False
-  ;;
-SMALLACFG)
-  use_cached_data=False
-  ;;
-*)
-  use_cached_data=False
-  ;;
-esac
+hp_path=test_cv_hp.txt
+use_cached_data=False
+train_dir=data/SMALLACFG
 
 CUDA_VISIBLE_DEVICES=${GPU} python3.7 cross_valid.py        \
   -seed 1                                                   \
   -data ${DATA}                                             \
+  -train_dir ${train_dir}                                   \
   -gm $gm                                                   \
   -mode ${gpu_or_cpu}                                       \
   -mlp_type ${mlp_type}                                     \
@@ -33,5 +23,5 @@ CUDA_VISIBLE_DEVICES=${GPU} python3.7 cross_valid.py        \
   -cache_path ${cache_path}                                 \
   -hp_path ${hp_path}
 
-echo "Cross validatation history:"
+echo "Cross validatation history: ${DATA}Run0.hist"
 cat ${DATA}Run0.hist

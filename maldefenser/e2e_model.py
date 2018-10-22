@@ -1,13 +1,17 @@
 #!/usr/bin/python3.7
 import sys
 import torch
+import math
 import glog as log
 import torch.optim as optim
 import torch.nn as nn
+import numpy as np
+from tqdm import tqdm
 from dgcnn_embedding import DGCNN
+from typing import Dict, List
 from mlp_dropout import MLPClassifier, RecallAtPrecision
 from embedding import EmbedMeanField, EmbedLoopyBP
-from ml_utils import cmd_args, gHP
+from ml_utils import cmd_args, gHP, S2VGraph
 
 
 class Classifier(nn.Module):
@@ -109,6 +113,10 @@ class Classifier(nn.Module):
         node_feat, _ = self._prepareFeatureLabel(graphs)
         return self.s2v(graphs, node_feat, None)
 
+    def predict(self, testGraphs):
+        raise NotImplementedError()
+        return None
+
     def sgdModel(self, optimizer, batch_graph, pos):
         if cmd_args.mlp_type == 'rap':
             for p in self.parameters():
@@ -132,3 +140,36 @@ class Classifier(nn.Module):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+
+
+def loopDataset(gList: List[S2VGraph], classifier: Classifier,
+                sampleIndices: List[int], optimizer=None):
+    """Train e2e model by looping over dataset"""
+    bsize = gHP['batchSize']
+    totalScore = []
+    numGiven = len(sampleIndices)
+    total_iters = math.ceil(numGiven / bsize)
+    pbar = tqdm(range(total_iters), unit='batch')
+    numUsed, allPred, allLabel = 0, [], []
+
+    for pos in pbar:
+        end = min((pos + 1) * bsize, numGiven)
+        batchIndices = sampleIndices[pos * bsize: end]
+        batchGraphs = [gList[idx] for idx in batchIndices]
+        if classifier.training:
+            classifier.sgdModel(optimizer, batchGraphs, pos)
+
+        loss, acc, pred = classifier(batchGraphs)
+        allPred.extend(pred.data.cpu().numpy().tolist())
+        allLabel.extend([g.label for g in batchGraphs])
+        loss = loss.data.cpu().numpy()
+        pbar.set_description('loss: %0.5f acc: %0.5f' % (loss, acc))
+        totalScore.append(np.array([loss, acc]))
+        numUsed += len(batchIndices)
+
+    if numUsed != numGiven:
+        log.warning(f"{numUsed} of {numGiven} cases used trainning/validating.")
+
+    classifier.mlp.print_result_dict()
+    avgScore = np.mean(np.array(totalScore), 0)
+    return avgScore, allPred, allLabel

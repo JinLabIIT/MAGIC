@@ -1,3 +1,5 @@
+import glob
+import pandas as pd
 import glog as log
 from typing import Dict, List
 from copy import deepcopy
@@ -64,3 +66,32 @@ class HyperParameterIterator(object):
             result = self.combinations[self.curr]
             self.curr += 1
             return result
+
+
+def f1MetricForHp(filename: str):
+    with open(filename, 'r') as f:
+        comment = f.readline()
+        hp = eval(comment[2:])
+
+    df = pd.read_csv(open(filename, 'r'), comment='#', header='infer')
+    log.debug(f'{filename}: {list(df.columns.values)}')
+    f1Score = df['AvgValidF1']
+    optRow = df.loc[f1Score.idxmax(axis=0)]
+    hp['optNumEpochs'] = optRow['Epoch'] + 1
+    hp['optAccu'] = optRow['AvgValidAccu']
+    hp['optF1'] = optRow['AvgValidF1']
+    hp['optPrec'] = optRow['AvgValidPrec']
+    hp['optRecl'] = optRow['AvgValidRecl']
+    f.close()
+
+    return hp
+
+
+def parseHpTuning(prefix: str):
+    optHp = {'optF1': 0.0}
+    for filename in glob.glob(prefix + 'Run*.hist', recursive=False):
+        hp = f1MetricForHp(filename)
+        if hp['optF1'] > optHp['optF1']:
+            optHp = deepcopy(hp)
+
+    return optHp
