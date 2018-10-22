@@ -7,6 +7,7 @@ import os
 import time
 import cfg_builder
 import threading
+from argparse import ArgumentParser
 from typing import List, Dict
 from dp_utils import delCodeSegLog, list2Str, loadBinaryIds
 
@@ -132,8 +133,13 @@ class AcfgMaster(object):
             elif self.bId2Worker[bId].adjMatrices[bId] is None:
                 numBinaries -= 1
 
+        bidOutput = open(self.pathPrefix + '/BinaryId.csv', 'w')
+        emptyBidOutput = open(self.pathPrefix + '/EmptyBinaryId.csv', 'w')
         output = open(self.pathPrefix + '/' + self.outputTxtName + '.txt', 'w')
+        bidOutput.write('BinaryId\n')
+        emptyBidOutput.write('BinaryId\n')
         output.write("%d\n" % numBinaries)
+
         for (b, bId) in enumerate(self.binaryIds):
             log.debug(f"[AggrDgcnnFormat] Processing {b + 1}th/{numBinaries} ACFG")
             if self.bId2Label is not None:
@@ -145,16 +151,19 @@ class AcfgMaster(object):
             spAdjacentMat = self.bId2Worker[bId].adjMatrices[bId]
             if features is None or spAdjacentMat is None:
                 log.warning(f'[AggrDgcnnFormat:{bId}] Empty CFG and features')
+                emptyBidOutput.write("%s\n" % bId)
                 continue
 
+            bidOutput.write("%s\n" % bId)
             output.write("%d %s\n" % (features.shape[0], label))
             indices = self.neighborsFromAdjacentMatrix(spAdjacentMat)
             for (i, feature) in enumerate(features):
                 neighbors = indices[i] if i in indices else []
-                output.write("1 %d %s\n" %
-                             (len(neighbors), list2Str(neighbors, feature)))
+                output.write("1 %d %s\n" % (len(neighbors), list2Str(neighbors, feature)))
 
         output.close()
+        emptyBidOutput.close()
+        bidOutput.close()
         log.info(f"[AggrDgcnnFormat] {numBinaries}/{len(self.binaryIds)} converted")
 
     def loadAcfgMatrices(self, bId):
@@ -177,8 +186,7 @@ class AcfgMaster(object):
 def processTrainSet():
     pathPrefix = '../TrainSet'
     labelPath = '../trainLabels.csv'
-    master = AcfgMaster(pathPrefix, labelPath, outputTxtName='ACFG_TRAIN')
-
+    master = AcfgMaster(pathPrefix, labelPath, outputTxtName='MSACFG')
     start = time.process_time()
     master.dispatchWorkers(1)
     runtime = time.process_time() - start
@@ -187,8 +195,7 @@ def processTrainSet():
 
 def processTestSet():
     pathPrefix = '../TestSet'
-    master = AcfgMaster(pathPrefix, labelPath=None, outputTxtName='ACFG_TEST')
-
+    master = AcfgMaster(pathPrefix, labelPath=None, outputTxtName='MSACFG')
     start = time.process_time()
     master.dispatchWorkers(1)
     runtime = time.process_time() - start
@@ -197,4 +204,13 @@ def processTestSet():
 
 if __name__ == '__main__':
     log.setLevel("INFO")
-    processTestSet()
+    cmdOpt = ArgumentParser(description='Multi-threading ACFG processing pipeline')
+    cmdOpt.add_argument('-object', type=str, required=True,
+                        help='Which dataset to process: {train, test}')
+    cmdArgs, _ = cmdOpt.parse_known_args()
+    if cmdArgs.object == 'train':
+        processTrainSet()
+    elif cmdArgs.object == 'test':
+        processTestSet()
+    else:
+        raise ValueError('Invalid argument: -object from {train, test}')

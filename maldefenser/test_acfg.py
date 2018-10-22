@@ -148,7 +148,7 @@ class TestCfgBuildedr(unittest.TestCase):
             seenInst = cfgBuilder.parseInstructions()
             self.assertEqual(len(seenInst), 0, "%s.asm is not empty" % bId)
 
-    # @unittest.skip("Uncomment to run")
+    @unittest.skip("Uncomment to run")
     def testEvalHexExpr(self):
         expressions = ['14769F + 48D - 48Dh - 14769Fh+ 14769F',
                        '4477DAB5F7',
@@ -201,19 +201,20 @@ class TestAcfgPipeline(unittest.TestCase):
         super(TestAcfgPipeline, self).setUp()
         # self.skipTest('Uncomment me to run this test case')
 
-    @unittest.skip("Takes about 1 day to")
+    @unittest.skip("Takes about 1 day to finish")
     def testDiscoverInstDict(self):
         pathPrefix = '../TestSet'
         binaryIds = loadBinaryIds(pathPrefix, None)
         worker = AcfgWorker(pathPrefix, binaryIds)
         worker.discoverInstDictionary('TestSetInstDictionary')
 
+    @unittest.skip("Uncomment to run")
     def testCmpInstDict(self):
         trainDictPath = 'InstDictionary.csv'
         testDictPath = 'TestSetInstDictionary.csv'
         print(cmpInstDict(trainDictPath, testDictPath))
 
-    # @unittest.skip("Uncomment to run")
+    @unittest.skip("Uncomment to run")
     def testWorkerRun(self):
         pathPrefix = '../TrainSet'
         binaryIds1 = [
@@ -278,7 +279,7 @@ class TestAcfgPipeline(unittest.TestCase):
                                  'L%d exp != result' % lineNum)
                 lineNum += 1
 
-    # @unittest.skip("Uncomment to run")
+    @unittest.skip("Uncomment to run")
     def testMasterDispatch(self):
         pathPrefix = '../TrainSet'
         labelPath = '../trainLabels.csv'
