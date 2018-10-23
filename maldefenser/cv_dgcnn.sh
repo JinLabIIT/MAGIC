@@ -8,7 +8,7 @@ gm=DGCNN  # model
 gpu_or_cpu=gpu
 mlp_type=vanilla # rap or vanilla
 cache_path=cached_${DATA,,}_graphs.pkl
-hp_path=train_once_hp.txt
+hp_path=train_once.hp
 
 # dataset-specific settings
 case ${DATA} in

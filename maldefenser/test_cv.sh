@@ -8,7 +8,7 @@ gm=DGCNN  # model
 gpu_or_cpu=gpu
 mlp_type=vanilla # rap or vanilla
 cache_path=cached_${DATA,,}_graphs.pkl
-hp_path=test_cv_hp.txt
+hp_path=test_cv.hp
 use_cached_data=False
 train_dir=data/SMALLACFG
 
