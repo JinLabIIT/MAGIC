@@ -52,12 +52,17 @@ class S2VGraph(object):
         self.node_features = node_features  # nparray (node_num * feature_dim)
         self.degs = list(dict(g.degree).values())
 
-        x, y = zip(*g.edges())
-        self.num_edges = len(x)
-        self.edge_pairs = np.ndarray(shape=(self.num_edges, 2), dtype=np.int32)
-        self.edge_pairs[:, 0] = x
-        self.edge_pairs[:, 1] = y
-        self.edge_pairs = self.edge_pairs.flatten()
+        if len(g.edges()) != 0:
+            x, y = zip(*g.edges())
+            self.num_edges = len(x)
+            self.edge_pairs = np.ndarray(shape=(self.num_edges, 2), dtype=np.int32)
+            self.edge_pairs[:, 0] = x
+            self.edge_pairs[:, 1] = y
+            self.edge_pairs = self.edge_pairs.flatten()
+        else:
+            self.num_edges = 0
+            self.edge_pairs = np.array([])
+            log.warning(f'[S2VGraph] ACFG {binaryId} has no edge')
 
 
 def loadData(dataDir: str, isTestSet: bool = False) -> List[S2VGraph]:
@@ -118,10 +123,7 @@ def loadData(dataDir: str, isTestSet: bool = False) -> List[S2VGraph]:
             nodeFeatures = None
 
         assert g.number_of_nodes() == numNodes
-        if g.number_of_edges() > 0:
-            gList.append(S2VGraph(orderedBid[i], g, label, nodeTags, nodeFeatures))
-        else:
-            log.warning('[LoadData] Ignore graph having no edge')
+        gList.append(S2VGraph(orderedBid[i], g, label, nodeTags, nodeFeatures))
 
     for g in gList:
         g.label = None if isTestSet else labelDict[g.label]

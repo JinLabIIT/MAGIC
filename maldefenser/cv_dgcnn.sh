@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DATA="${1-SMALLACFG}"
+DATA="${1-MSACFG}"
 GPU="${2-1}"  # select the GPU number, 0-3
 
 # general/default settings
@@ -13,12 +13,18 @@ hp_path=train_once_hp.txt
 # dataset-specific settings
 case ${DATA} in
 MSACFG)
+  train_dir=../TrainSet
+  test_dir=../TestSet
   use_cached_data=False
   ;;
 SMALLACFG)
+  train_dir=data/SMALLACFG
+  test_dir=data/SMALLACFG
   use_cached_data=False
   ;;
 *)
+  train_dir=data/DD
+  test_dir=data/DD
   use_cached_data=False
   ;;
 esac
@@ -26,6 +32,8 @@ esac
 CUDA_VISIBLE_DEVICES=${GPU} python3.7 cross_valid.py        \
   -seed 1                                                   \
   -data ${DATA}                                             \
+  -train_dir ${train_dir}                                   \
+  -test_dir ${test_dir}                                     \
   -gm $gm                                                   \
   -mode ${gpu_or_cpu}                                       \
   -mlp_type ${mlp_type}                                     \
