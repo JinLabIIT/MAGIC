@@ -58,17 +58,17 @@ class MLPClassifier(nn.Module):
 
         logits = self.h2_weights(h1)
         logits = F.log_softmax(logits, dim=1)
+        pred = logits.data.max(1)[1]
 
         if y is not None:
             y = Variable(y)
             loss = F.nll_loss(logits, y)
-            pred = logits.data.max(1)[1]
             correct = pred.eq(y.data.view_as(pred))
             accu = (correct.sum().item()) / float(correct.size(0))
             return loss, accu, pred
         else:
-            log.warning('[MLP] No label info received.')
-            return None
+            log.warning('[MLPClassifier] No label received, returning only predictions.')
+            return pred
 
     def print_result_dict(self):
         pass
@@ -110,7 +110,7 @@ class RecallAtPrecision(nn.Module):
         # recall_lb, precision_lb = TPL / (NP + 1e-5), TPL / (TPL + FPU + 1e-5)
         # log.info('R LB = %.5f, P LB = %.5f' % (recall_lb, precision_lb))
 
-    def forward(self, X, target):
+    def forward(self, X, target=None):
         """
         logits = f(X), target = Y in {0, 1}
         """
@@ -121,6 +121,10 @@ class RecallAtPrecision(nn.Module):
 
         logits = self.h2_weights(h1)
         logits = F.softmax(logits, dim=1)
+        pred_cls = (logits[:, 1] > logits[:, 0]).to(torch.int32)
+
+        if target is None:
+            return pred_cls
 
         target = target.to(torch.float32)
         y = 2 * target - 1  # y must in {-1, 1}
@@ -129,7 +133,6 @@ class RecallAtPrecision(nn.Module):
         # pred belong to {-1, 1}
         # pred = (logits[:, 1] - self.bias) * 2 - 1
         pred = (logits[:, 1] - logits[:, 0]) * 2 - 1
-
         hinge_loss = torch.max(1 - y * pred, torch.tensor(0.0).to(y.device))
         Lp = (hinge_loss * target).sum()
         Ln = (hinge_loss * (1 - target)).sum()
@@ -152,7 +155,6 @@ class RecallAtPrecision(nn.Module):
         for key, value in zip(keys, values):
             self.result_dict[key] = value
 
-        pred_cls = (logits[:, 1] > logits[:, 0]).to(torch.int32)
         correct = pred_cls.eq(target.to(torch.int32).data.view_as(pred_cls))
         accu = (correct.sum().item()) / float(correct.size(0))
 

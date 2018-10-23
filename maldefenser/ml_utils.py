@@ -52,7 +52,7 @@ class S2VGraph(object):
         self.node_features = node_features  # nparray (node_num * feature_dim)
         self.degs = list(dict(g.degree).values())
 
-        if len(g.edges()) != 0:
+        if g.number_of_edges() != 0:
             x, y = zip(*g.edges())
             self.num_edges = len(x)
             self.edge_pairs = np.ndarray(shape=(self.num_edges, 2), dtype=np.int32)
@@ -62,7 +62,8 @@ class S2VGraph(object):
         else:
             self.num_edges = 0
             self.edge_pairs = np.array([])
-            log.warning(f'[S2VGraph] ACFG {binaryId} has no edge')
+            log.warning(f'[{binaryId}] has no edge')
+            log.debug(f'[{binaryId}] #nodes: {self.num_nodes}, label: {label}')
 
 
 def loadData(dataDir: str, isTestSet: bool = False) -> List[S2VGraph]:

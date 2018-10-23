@@ -69,7 +69,9 @@ class Classifier(nn.Module):
             node_feat_flag = False
 
         for i in range(len(batch_graph)):
-            labels[i] = batch_graph[i].label
+            if batch_graph[i].label is not None:
+                labels[i] = batch_graph[i].label
+
             n_nodes += batch_graph[i].num_nodes
             if node_tag_flag is True:
                 concat_tag += batch_graph[i].node_tags
@@ -87,8 +89,10 @@ class Classifier(nn.Module):
             node_feat = torch.cat(concat_feat, 0)
 
         if node_feat_flag and node_tag_flag:
-            # concatenate one-hot embedding of node tags (node labels)
-            # with continuous node features
+            """
+            Concatenate one-hot embedding of node tags (node labels)
+            with continuous node features
+            """
             node_feat = torch.cat([node_tag.type_as(node_feat), node_feat], 1)
         elif node_feat_flag is False and node_tag_flag is True:
             node_feat = node_tag
@@ -106,16 +110,17 @@ class Classifier(nn.Module):
 
     def forward(self, batch_graph):
         node_feat, labels = self._prepareFeatureLabel(batch_graph)
-        embed = self.s2v(batch_graph, node_feat, None)
+        embed = self.s2v(batch_graph, node_feat, edge_feat=None)
         return self.mlp(embed, labels)
 
     def embedding(self, graphs):
         node_feat, _ = self._prepareFeatureLabel(graphs)
-        return self.s2v(graphs, node_feat, None)
+        return self.s2v(graphs, node_feat, edge_feat=None)
 
     def predict(self, testGraphs):
-        raise NotImplementedError()
-        return None
+        nodeFeature, _ = self._prepareFeatureLabel(testGraphs)
+        embed = self.s2v(testGraphs, nodeFeature, edge_feat=None)
+        return self.mlp(embed)
 
     def sgdModel(self, optimizer, batch_graph, pos):
         if cmd_args.mlp_type == 'rap':
