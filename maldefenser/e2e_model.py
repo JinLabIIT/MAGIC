@@ -153,8 +153,8 @@ def loopDataset(gList: List[S2VGraph], classifier: Classifier,
     bsize = gHP['batchSize']
     totalScore = []
     numGiven = len(sampleIndices)
-    total_iters = math.ceil(numGiven / bsize)
-    pbar = tqdm(range(total_iters), unit='batch')
+    totalIters = math.ceil(numGiven / bsize)
+    pbar = tqdm(range(totalIters), unit='batch')
     numUsed, allPred, allLabel = 0, [], []
 
     for pos in pbar:
@@ -178,3 +178,21 @@ def loopDataset(gList: List[S2VGraph], classifier: Classifier,
     classifier.mlp.print_result_dict()
     avgScore = np.mean(np.array(totalScore), 0)
     return avgScore, allPred, allLabel
+
+
+def predictDataset(gList: List[S2VGraph], classifier: Classifier):
+    """Inference batch by batch on large dataset"""
+    indices = list(range(len(gList)))
+    allPred = []
+    bsize = gHP['batchSize']
+    totalIters = math.ceil(len(gList) / bsize)
+    pbar = tqdm(range(totalIters), unit='batch')
+    pbar.set_description('predicting')
+
+    for pos in pbar:
+        end = min((pos + 1) * bsize, len(gList))
+        batchGraphs = [gList[idx] for idx in indices[pos * bsize: end]]
+        batchPred = classifier.predict(batchGraphs)
+        allPred.extend(batchPred.data.cpu().numpy().tolist())
+
+    return allPred

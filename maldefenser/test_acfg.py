@@ -115,17 +115,17 @@ class TestCfgBuildedr(unittest.TestCase):
     def testEmptyCodeSeg(self):
         pathPrefix = '../TrainSet'
         binaryIds = [
-            # Empty ones in trainset
-            'da3XhOZzQEbKVtLgMYWv',
-            'a9oIzfw03ED4lTBCt52Y',
-            'fRLS3aKkijp4GH0Ds6Pv',
-            '6tfw0xSL2FNHOCJBdlaA',
-            'd0iHC6ANYGon7myPFzBe',
-            '58kxhXouHzFd4g3rmInB',
-            'fyH8oWql4rg7tEJSLpIB',
-            'IidxQvXrlBkWPZAfcqKT',
-            'cf4nzsoCmudt1kwleOTI',
-            'GXFP0dYvns5NoQtIBECf',
+            # Empty ones in trainset: BinaryId => label
+            'da3XhOZzQEbKVtLgMYWv',  # => 1
+            'a9oIzfw03ED4lTBCt52Y',  # => 1
+            'fRLS3aKkijp4GH0Ds6Pv',  # => 1
+            '6tfw0xSL2FNHOCJBdlaA',  # => 1
+            'd0iHC6ANYGon7myPFzBe',  # => 1
+            '58kxhXouHzFd4g3rmInB',  # => 1
+            'fyH8oWql4rg7tEJSLpIB',  # => 5
+            'IidxQvXrlBkWPZAfcqKT',  # => 1
+            'cf4nzsoCmudt1kwleOTI',  # => 1
+            'GXFP0dYvns5NoQtIBECf',  # => 6
         ]
         # Empty ones in testset
         # ZOtweKduNMynmpiG4brh

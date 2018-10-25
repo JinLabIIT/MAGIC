@@ -26,4 +26,4 @@ CUDA_VISIBLE_DEVICES=${GPU} python3.7 tuned_model.py        \
   -hp_path ${hp_path}
 
 echo "Tuned model prediction from ${test_dir}/submission.csv"
-cat ${test_dir}/submission.csv
+head -n 10 ${test_dir}/submission.csv

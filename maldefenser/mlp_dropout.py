@@ -34,6 +34,7 @@ class MLPRegression(nn.Module):
             mae = F.l1_loss(pred, y)
             return pred, mae, mse
         else:
+            log.debug('[MLPRegression] None label, return only predictions.')
             return pred
 
     def print_result_dict(self):
@@ -56,8 +57,9 @@ class MLPClassifier(nn.Module):
         if self.with_dropout:
             h1 = F.dropout(h1, training=self.training)
 
-        logits = self.h2_weights(h1)
-        logits = F.log_softmax(logits, dim=1)
+        h2 = self.h2_weights(h1)
+        predProb = F.softmax(h2, dim=1)
+        logits = F.log_softmax(h2, dim=1)
         pred = logits.data.max(1)[1]
 
         if y is not None:
@@ -67,8 +69,8 @@ class MLPClassifier(nn.Module):
             accu = (correct.sum().item()) / float(correct.size(0))
             return loss, accu, pred
         else:
-            log.warning('[MLPClassifier] No label received, returning only predictions.')
-            return pred
+            log.debug('[MLPClassifier] None label, return only predict prob.')
+            return predProb
 
     def print_result_dict(self):
         pass

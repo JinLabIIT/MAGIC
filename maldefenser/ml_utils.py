@@ -62,8 +62,8 @@ class S2VGraph(object):
         else:
             self.num_edges = 0
             self.edge_pairs = np.array([])
-            log.warning(f'[{binaryId}] has no edge')
-            log.debug(f'[{binaryId}] #nodes: {self.num_nodes}, label: {label}')
+            log.warning(f'ACFG-{binaryId} has no edge')
+            log.debug(f'{binaryId} #nodes: {self.num_nodes}, label: {label}')
 
 
 def loadData(dataDir: str, isTestSet: bool = False) -> List[S2VGraph]:

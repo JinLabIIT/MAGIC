@@ -8,7 +8,6 @@ gm=DGCNN  # model
 gpu_or_cpu=gpu
 mlp_type=vanilla # rap or vanilla
 cache_path=cached_${DATA,,}_graphs.pkl
-hp_path=train_once.hp
 
 # dataset-specific settings
 case ${DATA} in
@@ -29,7 +28,7 @@ SMALLACFG)
   ;;
 esac
 
-CUDA_VISIBLE_DEVICES=${GPU} python3.7 cross_valid.py        \
+CUDA_VISIBLE_DEVICES=${GPU} python3.7 tuned_model.py        \
   -seed 1                                                   \
   -data ${DATA}                                             \
   -train_dir ${train_dir}                                   \
@@ -38,8 +37,7 @@ CUDA_VISIBLE_DEVICES=${GPU} python3.7 cross_valid.py        \
   -mode ${gpu_or_cpu}                                       \
   -mlp_type ${mlp_type}                                     \
   -use_cached_data ${use_cached_data}                       \
-  -cache_path ${cache_path}                                 \
-  -hp_path ${hp_path}
+  -cache_path ${cache_path}
 
-echo "Cross validatation history:"
-head -n10 ${DATA}Run0.hist
+echo "Tuned model prediction from ${test_dir}/submission.csv"
+head -n10 ${test_dir}/submission.csv
