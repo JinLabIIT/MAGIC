@@ -75,9 +75,10 @@ def f1MetricForHp(filename: str):
 
     df = pd.read_csv(open(filename, 'r'), comment='#', header='infer')
     log.debug(f'{filename}: {list(df.columns.values)}')
-    f1Score = df['AvgValidF1']
-    optRow = df.loc[f1Score.idxmax(axis=0)]
+    validLoss = df['AvgValidLoss']
+    optRow = df.loc[validLoss.idxmin(axis=0)]
     hp['optNumEpochs'] = optRow['Epoch'] + 1
+    hp['optLoss'] = optRow['AvgValidLoss']
     hp['optAccu'] = optRow['AvgValidAccu']
     hp['optF1'] = optRow['AvgValidF1']
     hp['optPrec'] = optRow['AvgValidPrec']

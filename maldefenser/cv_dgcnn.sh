@@ -7,7 +7,7 @@ GPU="${2-1}"  # select the GPU number, 0-3
 gm=DGCNN  # model
 gpu_or_cpu=gpu
 mlp_type=vanilla # rap or vanilla
-cache_path=cached_${DATA,,}_graphs.pkl
+cache_path=cached_${DATA,,}_graphs
 hp_path=train_once.hp
 
 # dataset-specific settings

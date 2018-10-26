@@ -7,14 +7,14 @@ GPU="${2-1}"  # select the GPU number, 0-3
 gm=DGCNN  # model
 gpu_or_cpu=gpu
 mlp_type=vanilla # rap or vanilla
-cache_path=cached_${DATA,,}_graphs.pkl
+cache_path=cached_${DATA,,}_graphs
 
 # dataset-specific settings
 case ${DATA} in
 MSACFG)
   train_dir=../TrainSet
   test_dir=../TestSet
-  use_cached_data=False
+  use_cached_data=True
   ;;
 SMALLACFG)
   train_dir=data/SMALLACFG

@@ -145,9 +145,12 @@ def loadData(dataDir: str, isTestSet: bool = False) -> List[S2VGraph]:
 def loadGraphsMayCache(dataDir: str, isTestSet: bool = False) -> List[S2VGraph]:
     """ Enhance loadData() with caching. """
     cachePath = cmd_args.cache_path
+    if isTestSet == True:
+        cachePath += '_test'
+
     if cmd_args.use_cached_data:
         log.info(f"Loading cached dataset from {cachePath}")
-        cacheFile = open(cachePath, 'rb')
+        cacheFile = open(cachePath + '.pkl', 'rb')
         dataset = pkl.load(cacheFile)
         gHP['numClasses'] = dataset['numClasses']
         gHP['featureDim'] = dataset['featureDim']
@@ -155,9 +158,9 @@ def loadGraphsMayCache(dataDir: str, isTestSet: bool = False) -> List[S2VGraph]:
         graphs = dataset['graphs']
         cacheFile.close()
     else:
-        graphs = loadData(dataDir)
+        graphs = loadData(dataDir, isTestSet)
         log.info(f"Dumping cached dataset to {cachePath}")
-        cacheFile = open(cachePath, 'wb')
+        cacheFile = open(cachePath + '.pkl', 'wb')
         dataset = {}
         dataset['numClasses'] = gHP['numClasses']
         dataset['featureDim'] = gHP['featureDim']

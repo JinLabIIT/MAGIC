@@ -127,8 +127,8 @@ class Classifier(nn.Module):
             for p in self.parameters():
                 p.requires_grad_(True)
             self.mlp.lam.requires_grad_(False)
-            loss, acc, pred = self.forward(batch_graph)
             optimizer.zero_grad()
+            loss, acc, pred = self.forward(batch_graph)
             loss.backward()
             optimizer.step()
 
@@ -136,13 +136,13 @@ class Classifier(nn.Module):
                 for p in self.parameters():
                     p.requires_grad_(False)
                 self.mlp.lam.requires_grad_(True)
-                loss, acc, pred = self.forward(batch_graph)
                 optimizer.zero_grad()
+                loss, acc, pred = self.forward(batch_graph)
                 loss.backward()
                 optimizer.step()
         else:
-            loss, acc, pred = self.forward(batch_graph)
             optimizer.zero_grad()
+            loss, acc, pred = self.forward(batch_graph)
             loss.backward()
             optimizer.step()
 
@@ -168,7 +168,7 @@ def loopDataset(gList: List[S2VGraph], classifier: Classifier,
         allPred.extend(pred.data.cpu().numpy().tolist())
         allLabel.extend([g.label for g in batchGraphs])
         loss = loss.data.cpu().numpy()
-        pbar.set_description('loss: %0.5f acc: %0.5f' % (loss, acc))
+        pbar.set_description('loss: %.5f acc: %.5f' % (loss, acc))
         totalScore.append(np.array([loss, acc]))
         numUsed += len(batchIndices)
 
