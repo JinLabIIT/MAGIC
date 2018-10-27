@@ -45,12 +45,17 @@ def exportRandomPredictions(graphs):
     output.close()
 
 
-def exportPredictions(graphs, predProb):
+def exportPredictions(graphs, predProb, epoch=None):
     log.debug(f'Export {len(predProb)} predictions for {len(graphs)} graphs')
     assert len(graphs) == len(predProb)
-    output = open(cmd_args.test_dir + '/submission.csv', 'w')
+    if epoch is None:
+        output = open(cmd_args.test_dir + '/submission.csv', 'w')
+    else:
+        output = open(cmd_args.test_dir + '/submissionE%d.csv' % epoch, 'w')
+
     output.write('"Id","Prediction1","Prediction2","Prediction3","Prediction4","Prediction5","Prediction6","Prediction7","Prediction8","Prediction9"\n')
     for (i, g) in enumerate(graphs):
+        assert len(predProb[i]) == gHP['numClasses']
         prob = ["%.8f" % p for p in predProb[i]]
         elems = ['"' + str(g.bId) + '"'] + prob
         output.write('%s\n' % ",".join(elems))
@@ -127,6 +132,11 @@ def trainThenPredict(trainSet, testGraphs) -> Dict[str, float]:
         validPrecHist.append(prScore['precisions'])
         validRecallHist.append(prScore['recalls'])
         validF1Hist.append(prScore['weightedF1'])
+
+        if epoch % 10 == 0:
+            classifier.eval()
+            testPredProb = predictDataset(testGraphs, classifier)
+            exportPredictions(testGraphs, testPredProb, epoch)
 
     log.info(f'Net training time = {time.process_time() - startTime} seconds')
     storeConfusionMatrix(trainPred, trainLabels, 'train')

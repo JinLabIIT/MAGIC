@@ -9,7 +9,7 @@ import numpy as np
 from tqdm import tqdm
 from dgcnn_embedding import DGCNN
 from typing import Dict, List
-from mlp_dropout import MLPClassifier, RecallAtPrecision
+from mlp_dropout import MLPClassifier, RecallAtPrecision, LogisticRegression
 from embedding import EmbedMeanField, EmbedLoopyBP
 from ml_utils import cmd_args, gHP, S2VGraph
 
@@ -46,6 +46,9 @@ class Classifier(nn.Module):
                                          hidden_size=gHP['regHidden'],
                                          alpha=0.6,
                                          with_dropout=gHP['dropOutRate'])
+        elif cmd_args.mlp_type == 'logistic_reg':
+            self.mlp = LogisticRegression(input_size=gHP['s2vOutDim'],
+                                          num_labels=gHP['numClasses'])
         else:
             self.mlp = MLPClassifier(input_size=gHP['s2vOutDim'],
                                      hidden_size=gHP['regHidden'],

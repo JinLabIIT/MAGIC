@@ -12,6 +12,27 @@ sys.path.append('%s/pytorch_structure2vec-master/s2v_lib'
                 % os.path.dirname(os.path.realpath(__file__)))
 from pytorch_util import weights_init
 
+class LogisticRegression(nn.Module):
+    def __init__(self, input_size, num_labels):
+        super(LogisticRegression, self).__init__()
+        self.linear = nn.Linear(input_size, num_labels)
+        weights_init(self)
+
+    def forward(self, x, y=None):
+        predProb = F.softmax(self.linear(x), dim=1)
+        logProb = F.log_softmax(self.linear(x), dim=1)
+        if y is None:
+            return predProb
+        else:
+            pred = predProb.data.max(1)[1]
+            loss = F.nll_loss(logProb, y)
+            correct = pred.eq(y.data.view_as(pred))
+            accu = (correct.sum().item()) / float(correct.size(0))
+            return loss, accu, pred
+
+    def print_result_dict(self):
+        pass
+
 
 class MLPRegression(nn.Module):
     def __init__(self, input_size, hidden_size):

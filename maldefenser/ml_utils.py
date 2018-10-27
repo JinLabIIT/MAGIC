@@ -35,10 +35,22 @@ gHP = dict()
 cmd_args, _ = cmd_opt.parse_known_args()
 cmd_args.use_cached_data = (cmd_args.use_cached_data == "True")
 log.info("Parsed cmdline arguments: %s" % cmd_args)
+testBinaryIds = {
+    'cqdUoQDaZfGkt5ilBe7n': 0,
+    'jgOs7KiB0aTEzvSUJVPp': 1,
+    '6RQtx0X42zOelTDaZnvi': 2,
+    'HaTioeY3kbvJW2LXtOwF': 3,
+    'Fnda3PuqJT6Ep5vjOWCk': 4,
+    'exGy3iaKJmRprdHcB0NO': 5,
+    'bZz2OoQmqx0PdGBhaHKk': 6,
+    '0Q4ALVSRnlHUBjyOb1sw': 7,
+    'hIkK1vBdj9fDJPcUWzA8': 8,
+}
 
 
 class S2VGraph(object):
-    def __init__(self, binaryId, g, label, node_tags=None, node_features=None):
+    def __init__(self, binaryId: str, g: nx.Graph, label: int,
+                 node_tags: int = None, node_features=None):
         """
         g: a networkx graph
         label: an integer graph label
@@ -48,7 +60,7 @@ class S2VGraph(object):
         self.bId = binaryId
         self.num_nodes = len(node_tags)
         self.node_tags = node_tags
-        self.label = label
+        self.label = None if label == '?' else label
         self.node_features = node_features  # nparray (node_num * feature_dim)
         self.degs = list(dict(g.degree).values())
 
@@ -69,24 +81,21 @@ class S2VGraph(object):
 def loadData(dataDir: str, isTestSet: bool = False) -> List[S2VGraph]:
     log.info('Loading data as list of S2VGraph(s)')
     gList: List[S2VGraph] = []
-    labelDict: Dict[str, int] = {} # mapping label to 0-based int
     tagDict: Dict[str, int] = {}   # mapping node tag to 0-based int
-
+    numClasses = 0
     f = open('%s/%s.txt' % (dataDir, cmd_args.data), 'r')
     numGraphs = int(f.readline().strip())
 
-    orderedBid = pd.read_csv('%s/BinaryId.csv' % dataDir)['BinaryId']
-    assert orderedBid.shape[0] == numGraphs
-
     for i in range(numGraphs):
         row = f.readline().strip().split()
-        numNodes, label = int(row[0]), row[1]
+        numNodes, label, bId = int(row[0]), row[1], row[2]
         if not isTestSet:
-            label = int(row[1])
+            label = int(row[1]) - 1
+            numClasses = max(numClasses, label + 1)
 
-        if label != '?' and label not in labelDict:
-            mapped = len(labelDict)
-            labelDict[label] = mapped
+        if bId in testBinaryIds:
+            log.debug(f'[Test {bId}]{label} =? {testBinaryIds[bId]}')
+            assert label == testBinaryIds[bId]
 
         g = nx.Graph()
         nodeTags = []
@@ -124,12 +133,9 @@ def loadData(dataDir: str, isTestSet: bool = False) -> List[S2VGraph]:
             nodeFeatures = None
 
         assert g.number_of_nodes() == numNodes
-        gList.append(S2VGraph(orderedBid[i], g, label, nodeTags, nodeFeatures))
+        gList.append(S2VGraph(bId, g, label, nodeTags, nodeFeatures))
 
-    for g in gList:
-        g.label = None if isTestSet else labelDict[g.label]
-
-    gHP['numClasses'] = len(labelDict)
+    gHP['numClasses'] = numClasses
     gHP['nodeTagDim'] = len(tagDict)
     gHP['featureDim'] = 0
     if nodeFeatures is not None:

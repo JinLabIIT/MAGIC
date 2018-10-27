@@ -133,10 +133,8 @@ class AcfgMaster(object):
             elif self.bId2Worker[bId].adjMatrices[bId] is None:
                 numBinaries -= 1
 
-        bidOutput = open(self.pathPrefix + '/BinaryId.csv', 'w')
         emptyBidOutput = open(self.pathPrefix + '/EmptyBinaryId.csv', 'w')
         output = open(self.pathPrefix + '/' + self.outputTxtName + '.txt', 'w')
-        bidOutput.write('BinaryId\n')
         emptyBidOutput.write('BinaryId\n')
         output.write("%d\n" % numBinaries)
 
@@ -154,8 +152,7 @@ class AcfgMaster(object):
                 emptyBidOutput.write("%s\n" % bId)
                 continue
 
-            bidOutput.write("%s\n" % bId)
-            output.write("%d %s\n" % (features.shape[0], label))
+            output.write("%d %s %s\n" % (features.shape[0], label, bId))
             indices = self.neighborsFromAdjacentMatrix(spAdjacentMat)
             for (i, feature) in enumerate(features):
                 neighbors = indices[i] if i in indices else []
@@ -163,7 +160,6 @@ class AcfgMaster(object):
 
         output.close()
         emptyBidOutput.close()
-        bidOutput.close()
         log.info(f"[AggrDgcnnFormat] {numBinaries}/{len(self.binaryIds)} converted")
 
     def loadAcfgMatrices(self, bId):

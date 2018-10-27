@@ -279,19 +279,28 @@ class TestAcfgPipeline(unittest.TestCase):
                                  'L%d exp != result' % lineNum)
                 lineNum += 1
 
-    @unittest.skip("Uncomment to run")
+    # @unittest.skip("Uncomment to run")
     def testMasterDispatch(self):
         pathPrefix = '../TrainSet'
         labelPath = '../trainLabels.csv'
         binaryIds = [
-            'exGy3iaKJmRprdHcB0NO',
-            '0Q4ALVSRnlHUBjyOb1sw',
             'cqdUoQDaZfGkt5ilBe7n',
-            'BKpbxgMPWUNZosdnO8Ak',
+            'jgOs7KiB0aTEzvSUJVPp',
+            '6RQtx0X42zOelTDaZnvi',
+            'HaTioeY3kbvJW2LXtOwF',
+            'Fnda3PuqJT6Ep5vjOWCk',
+            'exGy3iaKJmRprdHcB0NO',
+            'bZz2OoQmqx0PdGBhaHKk',
+            '0Q4ALVSRnlHUBjyOb1sw',
+            'hIkK1vBdj9fDJPcUWzA8',
         ]
+        labels = ['1', '2', '3', '4', '5','6', '7', '8', '9']
         master = AcfgMaster(pathPrefix, labelPath,
                             'TestMasterDispatch', binaryIds)
-        master.dispatchWorkers(4)
+        master.dispatchWorkers(3)
+        for (i, bId) in enumerate(master.binaryIds):
+            log.info(f'label({bId}) = {master.bId2Label[bId]}')
+            self.assertEqual(master.bId2Label[bId], labels[i], 'Wrong label')
 
     def testMasterTestSet(self):
         pathPrefix = '../TestSet'
