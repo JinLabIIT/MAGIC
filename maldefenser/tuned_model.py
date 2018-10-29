@@ -183,7 +183,6 @@ if __name__ == '__main__':
     dataReadyTime = time.process_time() - startTime
     log.info('Testset ready takes %.2fs' % dataReadyTime)
 
-    # exportRandomPredictions(testGraphs)
     optHp = parseHpTuning(cmd_args.data)
     log.info(f'Optimal hyperparameter setting: {optHp}')
     for (key, val) in optHp.items():
@@ -194,5 +193,5 @@ if __name__ == '__main__':
 
         gHP[key] = val
 
-    log.info(f'Merged with global hyperparameter setting: {gHP}')
+    log.info(f'Global hyperparameter setting: {gHP}')
     trainThenPredict(trainGraphs, testGraphs)

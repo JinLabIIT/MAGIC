@@ -6,27 +6,11 @@ GPU="${2-1}"  # select the GPU number, 0-3
 # general/default settings
 gm=DGCNN  # model
 gpu_or_cpu=gpu
-mlp_type=logistic_reg # rap or vanilla
+mlp_type=vanilla # rap or vanilla
 cache_path=cached_${DATA,,}_graphs
-
-# dataset-specific settings
-case ${DATA} in
-MSACFG)
-  train_dir=../TrainSet
-  test_dir=../TestSet
-  use_cached_data=False
-  ;;
-SMALLACFG)
-  train_dir=data/SMALLACFG
-  test_dir=data/SMALLACFG
-  use_cached_data=False
-  ;;
-*)
-  train_dir=data/DD
-  test_dir=data/DD
-  use_cached_data=False
-  ;;
-esac
+train_dir=../TrainSet
+test_dir=../TestSet
+use_cached_data=True
 
 CUDA_VISIBLE_DEVICES=${GPU} python3.7 tuned_model.py        \
   -seed 1                                                   \

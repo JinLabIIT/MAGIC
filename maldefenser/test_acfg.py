@@ -235,14 +235,12 @@ class TestAcfgPipeline(unittest.TestCase):
 
     def testAggregateDgcnnFormat(self):
         pathPrefix = '../DataSamples'
-        labelPath = '../trainLabels.csv'
         binaryIds = ['test',]
-        master = AcfgMaster(pathPrefix, labelPath, 'test', binaryIds)
-        master.bId2Label['test'] = '1'
+        master = AcfgMaster(pathPrefix, None, 'test', binaryIds)
         master.dispatchWorkers(1)
         expectedRet = [
             [1],      # number of graphs
-            [21, 1],  # number of nodes, label of graph
+            [21, '?', 'test'],  # number of nodes, label of graph
             #               0  1  2  3  4  5  6  7  8  9 10 11 12
             [1,2,10,13,     0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 2.0, 1.0],  # -2  0
             [1,0,           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],  # -1  1

@@ -35,8 +35,8 @@ class DGCNN(nn.Module):
         self.conv1d_params1 = nn.Conv1d(1, conv1d_channels[0],
                                         conv1d_kws[0], conv1d_kws[0])
         self.maxpool1d = nn.MaxPool1d(2, 2)
-        self.conv1d_params2 = nn.Conv1d(conv1d_channels[0],
-                                        conv1d_channels[1], conv1d_kws[1], 1)
+        self.conv1d_params2 = nn.Conv1d(conv1d_channels[0], conv1d_channels[1],
+                                        conv1d_kws[1], 1)
 
         dense_dim = int((k - 2) / 2 + 1)
         self.dense_dim = (dense_dim - conv1d_kws[1] + 1) * conv1d_channels[1]
