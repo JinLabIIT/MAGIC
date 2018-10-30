@@ -27,23 +27,28 @@ class Classifier(nn.Module):
             log.fatal('Unknown graph embedding model: %s' % cmd_args.gm)
             sys.exit()
 
+        nodeFeatDim = gHP['featureDim'] + gHP['nodeTagDim']
         if cmd_args.gm == 'DGCNN':
-            self.s2v = model(latent_dim=gHP['convSize'],
+            self.s2v = model(latent_dim=gHP['graphConvSize'],
                              output_dim=gHP['s2vOutDim'],
-                             num_node_feats=(gHP['featureDim'] +
-                                             gHP['nodeTagDim']),
-                             num_edge_feats=0,
-                             k=gHP['sortPoolingK'])
+                             num_node_feats=nodeFeatDim,
+                             k=gHP['sortPoolingK'],
+                             conv1d_channels=gHP['convChannels'],
+                             conv1d_kws=gHP['convKernSizes'],
+                             conv1d_maxpl=gHP['convMaxPool'])
         else:
-            self.s2v = model(latent_dim=gHP['convSize'],
+            self.s2v = model(latent_dim=gHP['graphConvSize'],
                              output_dim=gHP['s2vOutDim'],
                              num_node_feats=gHP['featureDim'],
                              num_edge_feats=0,
                              max_lv=gHP['msgPassLv'])
 
+        if gHP['s2vOutDim'] == 0:
+            gHP['s2vOutDim'] = self.s2v.dense_dim
+
         if cmd_args.mlp_type == 'rap':
             self.mlp = RecallAtPrecision(input_size=gHP['s2vOutDim'],
-                                         hidden_size=gHP['regHidden'],
+                                         hidden_size=gHP['mlpHidden'],
                                          alpha=0.6,
                                          with_dropout=gHP['dropOutRate'])
         elif cmd_args.mlp_type == 'logistic_reg':
@@ -51,7 +56,7 @@ class Classifier(nn.Module):
                                           num_labels=gHP['numClasses'])
         else:
             self.mlp = MLPClassifier(input_size=gHP['s2vOutDim'],
-                                     hidden_size=gHP['regHidden'],
+                                     hidden_size=gHP['mlpHidden'],
                                      num_class=gHP['numClasses'],
                                      with_dropout=gHP['dropOutRate'])
 

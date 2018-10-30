@@ -155,7 +155,7 @@ def trainThenPredict(trainSet, testGraphs) -> Dict[str, float]:
     }
     log.info(f'Model trainset + validset performance:\n{result}')
     df = pd.DataFrame.from_dict(result)
-    histFile = open('%sPred.hist' % cmd_args.data, 'w')
+    histFile = open('%sPredHist.csv' % cmd_args.data, 'w')
     histFile.write("# %s\n" % str(gHP))
     df.to_csv(histFile, index_label='Epoch', float_format='%.6f')
     histFile.close()

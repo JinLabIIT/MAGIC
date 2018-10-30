@@ -111,7 +111,8 @@ def crossValidate(graphFolds: List[List[S2VGraph]], runId: int) -> None:
 
     avgMetrics = averageMetrics(cvMetrics)
     df = pd.DataFrame.from_dict(avgMetrics)
-    histFile = open('%sRun%s.hist' % (cmd_args.data, runId), 'w')
+    histFile = open('%sGpu%sRun%s.csv' %
+                    (cmd_args.data, cmd_args.gpu_id, runId), 'w')
     histFile.write("# %s\n" % str(gHP))
     df.to_csv(histFile, index_label='Epoch', float_format='%.6f')
     histFile.close()

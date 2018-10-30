@@ -19,6 +19,9 @@ class HyperParameterIterator(object):
         result = {}
         with open(hpPath, 'r') as f:
             for line in f:
+                if line.startswith('#') or line == "\n":
+                    continue
+
                 item1, item2 = line.split('=')
                 name = item1.lstrip(' ').rstrip(' ')
                 value = item2.lstrip(' ').rstrip(' ')
@@ -88,11 +91,13 @@ def f1MetricForHp(filename: str):
     return hp
 
 
-def parseHpTuning(prefix: str):
+def parseHpTuning(prefix: str, gpuIdList: List[int] = [1]):
     optHp = {'optF1': 0.0}
-    for filename in glob.glob(prefix + 'Run*.hist', recursive=False):
-        hp = f1MetricForHp(filename)
-        if hp['optF1'] > optHp['optF1']:
-            optHp = deepcopy(hp)
+    for gpuId in gpuIdList:
+        path = prefix + 'Gpu%sRun*.csv' % gpuId
+        for filename in glob.glob(path, recursive=False):
+            hp = f1MetricForHp(filename)
+            if hp['optF1'] > optHp['optF1']:
+                optHp = deepcopy(hp)
 
     return optHp

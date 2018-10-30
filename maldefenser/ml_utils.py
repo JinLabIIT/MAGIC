@@ -16,6 +16,8 @@ cmd_opt = argparse.ArgumentParser(
     description='Argparser for graph_classification')
 # Execution options
 cmd_opt.add_argument('-mode', default='cpu', help='cpu/gpu')
+cmd_opt.add_argument('-gpu_id', default=1,
+                     help='on which gpu the model is trained, in {0, 1, 2, 3}')
 cmd_opt.add_argument('-gm', default='mean_field', help='mean_field/loopy_bp')
 cmd_opt.add_argument('-data', default=None, help='txt data name')
 cmd_opt.add_argument('-train_dir', default='../TrainSet',

@@ -23,5 +23,5 @@ CUDA_VISIBLE_DEVICES=${GPU} python3.7 cross_valid.py        \
   -cache_path ${cache_path}                                 \
   -hp_path ${hp_path}
 
-echo "Cross validatation history: ${DATA}Run0.hist"
-cat ${DATA}Run0.hist
+echo "Cross validatation history: ${DATA}Run0.csv"
+cat ${DATA}Run0.csv

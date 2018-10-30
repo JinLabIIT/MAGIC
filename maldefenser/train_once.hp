@@ -1,10 +1,17 @@
+# DGCNN HPs
+sortPoolingRatio = [0.75]
+s2vOutDim = [0]
+graphConvSize = [[32, 32, 32, 1]]
+convChannels = [[8, 16]]
+convKernSizes = [[0, 8]]
+convMaxPool = [[4, 2]]
+
+# MLP HPs
+mlpHidden = [256]
+dropOutRate = [0.4]
+
+# Training HPs
+lr = [0.00012]
 batchSize = [40]
 cvFold = [5]
-numEpochs = [196]
-sortPoolingRatio = [0.75]
-s2vOutDim = [128]
-regHidden = [128]
-lr = [0.00012]
-dropOutRate = [0.32]
-convSize = [[32, 32, 32, 1]]
-msgPassLv = [4]
+numEpochs = [100]

@@ -14,9 +14,22 @@ from pytorch_util import weights_init, gnn_spmm
 
 
 class DGCNN(nn.Module):
-    def __init__(self, output_dim, num_node_feats, num_edge_feats,
+    def __init__(self, output_dim, num_node_feats, num_edge_feats=0,
                  latent_dim=[32, 32, 32, 1], k=30,
-                 conv1d_channels=[16, 32], conv1d_kws=[0, 5]):
+                 conv1d_channels=[16, 32], conv1d_kws=[0, 5],
+                 conv1d_maxpl=[2, 2]):
+        """
+        Args
+            output_dim: dimension of the DGCNN. If equals zero, it will be
+                        computed as the output of the final 1d conv layer;
+                        Otherwise, an extra dense layer will be appended after
+                        the final 1d conv layer to produce exact output size.
+            num_nodes_feats, num_edge_feats: dim of the node/edge attributes.
+            latend_dim: sizes of graph convolution layers
+            conv1d_channels: channel dimension of the 2 1d conv layers
+            conv1d_kws: kernel size of the 2 1d conv layers.
+                        conv1d_kws[0] is manually set to sum(latent_dim).
+        """
         log.info('Initializing DGCNN')
         super(DGCNN, self).__init__()
         self.latent_dim = latent_dim
@@ -34,11 +47,11 @@ class DGCNN(nn.Module):
 
         self.conv1d_params1 = nn.Conv1d(1, conv1d_channels[0],
                                         conv1d_kws[0], conv1d_kws[0])
-        self.maxpool1d = nn.MaxPool1d(2, 2)
+        self.maxpool1d = nn.MaxPool1d(conv1d_maxpl[0], stride=conv1d_maxpl[1])
         self.conv1d_params2 = nn.Conv1d(conv1d_channels[0], conv1d_channels[1],
                                         conv1d_kws[1], 1)
 
-        dense_dim = int((k - 2) / 2 + 1)
+        dense_dim = int((k - conv1d_maxpl[0]) / conv1d_maxpl[1] + 1)
         self.dense_dim = (dense_dim - conv1d_kws[1] + 1) * conv1d_channels[1]
 
         if num_edge_feats > 0:
