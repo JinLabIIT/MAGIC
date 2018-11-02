@@ -50,7 +50,7 @@ class Classifier(nn.Module):
             self.mlp = RecallAtPrecision(input_size=gHP['s2vOutDim'],
                                          hidden_size=gHP['mlpHidden'],
                                          alpha=0.6,
-                                         with_dropout=gHP['dropOutRate'])
+                                         dropout=gHP['dropOutRate'])
         elif cmd_args.mlp_type == 'logistic_reg':
             self.mlp = LogisticRegression(input_size=gHP['s2vOutDim'],
                                           num_labels=gHP['numClasses'])
@@ -58,7 +58,7 @@ class Classifier(nn.Module):
             self.mlp = MLPClassifier(input_size=gHP['s2vOutDim'],
                                      hidden_size=gHP['mlpHidden'],
                                      num_class=gHP['numClasses'],
-                                     with_dropout=gHP['dropOutRate'])
+                                     dropout=gHP['dropOutRate'])
 
     def _prepareFeatureLabel(self, batch_graph):
         labels = torch.LongTensor(len(batch_graph))

@@ -10,8 +10,9 @@ import numpy as np
 import pandas as pd
 import torch.optim as optim
 from typing import Dict, List
-from ml_utils import cmd_args, gHP, storeConfusionMatrix, kFoldSplit
-from ml_utils import computePrScores, loadGraphsMayCache, loadData
+from ml_utils import cmd_args, gHP, kFoldSplit
+from ml_utils import computePrScores, loadGraphsMayCache
+from ml_utils import storeConfusionMatrix, normalizeFeatures
 from e2e_model import Classifier, loopDataset, predictDataset
 from hyperparameters import parseHpTuning
 
@@ -85,10 +86,13 @@ def exportPredictions(graphs, predProb, epoch=None):
 
 def trainThenPredict(trainSet, testGraphs) -> Dict[str, float]:
     classifier = Classifier()
+
+    log.info(f'Global hyperparameter setting: {gHP}')
     if cmd_args.mode == 'gpu':
         classifier = classifier.cuda()
 
-    optimizer = optim.Adam(classifier.parameters(), lr=gHP['lr'])
+    optimizer = optim.Adam(classifier.parameters(),
+                           lr=gHP['lr'], weight_decay=gHP['l2RegFactor'])
 
     kFoldGraphs = kFoldSplit(max(gHP['cvFold'], 5), trainSet)
     trainGraphs = []
@@ -175,11 +179,13 @@ if __name__ == '__main__':
 
     startTime = time.process_time()
     trainGraphs = loadGraphsMayCache(cmd_args.train_dir, False)
+    normalizeFeatures(trainGraphs, useCachedTrain=True, operation='zero_mean')
     dataReadyTime = time.process_time() - startTime
     log.info('Trainset ready takes %.2fs' % dataReadyTime)
 
     startTime = time.process_time()
     testGraphs = loadGraphsMayCache(cmd_args.test_dir, True)
+    normalizeFeatures(testGraphs, useCachedTest=True, operation='zero_mean')
     dataReadyTime = time.process_time() - startTime
     log.info('Testset ready takes %.2fs' % dataReadyTime)
 
@@ -193,5 +199,4 @@ if __name__ == '__main__':
 
         gHP[key] = val
 
-    log.info(f'Global hyperparameter setting: {gHP}')
     trainThenPredict(trainGraphs, testGraphs)

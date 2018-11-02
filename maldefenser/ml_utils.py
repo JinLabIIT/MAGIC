@@ -191,6 +191,86 @@ def kFoldSplit(k: int, graphs: List[S2VGraph]) -> List[List[S2VGraph]]:
 
     return results
 
+
+def normalizeFeatures(graphs: List[S2VGraph],
+                      useCachedTrain: bool = False,
+                      useCachedTest: bool = False,
+                      operation: str = 'min_max') -> List[List[float]]:
+    if useCachedTrain:
+        log.debug(f'Using previous calculated train min/max vector')
+        maxVector = [
+            2.0, 1367.0, 5411.0, 525.0, 0.0, 4245.0, 1.0, 2516938.0, 8875.0,
+            2489922.0, 7916.0, 25527.0, 2516954.0
+        ]
+        minVector = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+        avgVector = [0.5962032061725268, 0.4180271544042307,
+                     1.6158560684958867, 0.24502194444083092,
+                     0.0, 2.175661078432198, 0.13442428699219405,
+                     63.45916465925378, 2.262125637901996,
+                     78.41444585456485, 0.018334971530191924,
+                     1.9924283931335767, 70.89752509521182]
+        stdVector = [0.49097240095840666, 1.3898312633734076,
+                     27.59374888091898, 0.514249527342708,
+                     0.000000000000001, 17.252417053163388,
+                     0.3411076048066078, 8141.555766865466,
+                     15.87218165891597, 7755.615488089883,
+                     2.9998780886433027, 28.02481653517624,
+                     8141.84431147715]
+    elif useCachedTest:
+        log.debug(f'Using previous calculated test min/max vector')
+        maxVector = [
+            2.0, 1883.0, 6999.0, 1036.0, 0.0, 4122.0, 1.0, 2514158.0, 5407.0,
+            2486757.0, 4728.0, 25527.0, 2514174.0
+        ]
+        minVector = [
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0
+        ]
+        avgVector = [0.5970183273238024, 0.414436492695235,
+                     1.6023817480537264, 0.24687678246451827,
+                     0.0, 2.1342394812947156, 0.1330682587555883,
+                     69.69281705685793, 2.258427280249422,
+                     83.6536707518127, 0.018659769558083145,
+                     1.987237055993612, 77.07021552681057]
+        stdVector = [0.4908864860606825, 1.5937404761957945,
+                     27.58260356845197, 0.6617551383910477,
+                     0.000000000000001, 17.397127884916774,
+                     0.33964849069835007, 8474.05518627391,
+                     15.633733132574285, 7959.109393152846,
+                     2.8443524115866694, 24.230326277528274,
+                     8474.337473921465]
+    else:
+        nodeFeatures = None
+        for g in graphs:
+            if nodeFeatures is None:
+                nodeFeatures = np.array(g.node_features)
+            else:
+                nodeFeatures = np.concatenate((nodeFeatures, g.node_features),
+                                              axis=0)
+
+        log.debug(f'Dim of features of all nodes: {nodeFeatures.shape}')
+        maxVector = np.amax(nodeFeatures, axis=0)
+        minVector = np.amin(nodeFeatures, axis=0)
+        avgVector = np.mean(nodeFeatures, axis=0)
+        stdVector = np.std(nodeFeatures, axis=0)
+
+    log.info(f'Max feature vector: {list(maxVector)}')
+    log.info(f'Min feature vector: {list(minVector)}')
+    log.info(f'Avg feature vector: {list(avgVector)}')
+    log.info(f'Std feature vector: {list(stdVector)}')
+
+    diff = [x - y for (x, y) in zip(maxVector, minVector)]
+    diffVector = [x if x > 0 else 1 for x in diff]
+    for g in graphs:
+        if operation == 'min_max':
+            g.node_features = (g.node_features - minVector) / diffVector
+        elif operation == 'zero_mean':
+            g.node_features = (g.node_features - avgVector) / stdVector
+        else:
+            log.error(f'Unknown operation: {operation}')
+
+    return [maxVector, minVector, avgVector, stdVector]
+
+
 def computePrScores(pred, labels, prefix) -> Dict[str, float]:
     scores = {}
     scores['precisions'] = precision_score(labels, pred, average='weighted')
@@ -238,3 +318,4 @@ def balancedSampling(graphs, neg_ratio=3):
 def toOnehot(indices, num_classes):
     onehot = torch.zeros(indices.size(0), num_classes, device=indices.device)
     return onehot.scatter_(1, indices.unsqueeze(1), 1)
+

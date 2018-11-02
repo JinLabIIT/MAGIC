@@ -12,6 +12,7 @@ sys.path.append('%s/pytorch_structure2vec-master/s2v_lib'
                 % os.path.dirname(os.path.realpath(__file__)))
 from pytorch_util import weights_init
 
+
 class LogisticRegression(nn.Module):
     def __init__(self, input_size, num_labels):
         super(LogisticRegression, self).__init__()
@@ -40,7 +41,6 @@ class MLPRegression(nn.Module):
 
         self.h1_weights = nn.Linear(input_size, hidden_size)
         self.h2_weights = nn.Linear(hidden_size, 1)
-
         weights_init(self)
 
     def forward(self, x, y=None):
@@ -63,20 +63,20 @@ class MLPRegression(nn.Module):
 
 
 class MLPClassifier(nn.Module):
-    def __init__(self, input_size, hidden_size, num_class, with_dropout=False):
+    def __init__(self, input_size, hidden_size, num_class, dropout=0.0):
         super(MLPClassifier, self).__init__()
 
         self.h1_weights = nn.Linear(input_size, hidden_size)
+        self.h1_bn = nn.BatchNorm1d(hidden_size)
         self.h2_weights = nn.Linear(hidden_size, num_class)
-        self.with_dropout = with_dropout
-
+        self.dropout = dropout
         weights_init(self)
 
     def forward(self, x, y=None):
         h1 = self.h1_weights(x)
-        h1 = F.relu(h1)
-        if self.with_dropout:
-            h1 = F.dropout(h1, training=self.training)
+        h1 = self.h1_bn(h1)
+        h1 = F.tanh(h1)
+        h1 = F.dropout(h1, p=self.dropout, training=self.training)
 
         h2 = self.h2_weights(h1)
         predProb = F.softmax(h2, dim=1)
@@ -98,14 +98,13 @@ class MLPClassifier(nn.Module):
 
 
 class RecallAtPrecision(nn.Module):
-    def __init__(self, input_size, hidden_size, alpha, with_dropout=False):
+    def __init__(self, input_size, hidden_size, alpha, dropout=0.0):
         super(RecallAtPrecision, self).__init__()
 
         self.device = torch.device('cuda')
         self.h1_weights = nn.Linear(input_size, hidden_size)
         self.h2_weights = nn.Linear(hidden_size, 2)
-        self.with_dropout = with_dropout
-        weights_init(self)
+        self.dropout = dropout
 
         self.alpha = alpha
         self.alpha_term = alpha / (1 - alpha)
@@ -113,6 +112,8 @@ class RecallAtPrecision(nn.Module):
                                           requires_grad=True))
         self.result_dict = {}
         log.info('Optimize recall @ fixed precision=%.2f' % self.alpha)
+
+        weights_init(self)
 
     def print_result_dict(self):
         TP = self.result_dict['true_pos']
@@ -139,8 +140,7 @@ class RecallAtPrecision(nn.Module):
         """
         h1 = self.h1_weights(X)
         h1 = F.sigmoid(h1)
-        if self.with_dropout:
-            h1 = F.dropout(h1, p=0.1, training=self.training)
+        h1 = F.dropout(h1, p=self.dropout, training=self.training)
 
         logits = self.h2_weights(h1)
         logits = F.softmax(logits, dim=1)

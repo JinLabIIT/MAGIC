@@ -6,7 +6,7 @@ GPU="${2-1}"  # select the GPU number, 0-3
 # general/default settings
 gm=DGCNN  # model
 gpu_or_cpu=gpu
-mlp_type=vanilla # rap or vanilla
+mlp_type=logistic_reg # rap or vanilla
 cache_path=cached_${DATA,,}_graphs
 train_dir=../TrainSet
 test_dir=../TestSet

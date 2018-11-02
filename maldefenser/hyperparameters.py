@@ -71,7 +71,7 @@ class HyperParameterIterator(object):
             return result
 
 
-def f1MetricForHp(filename: str):
+def hpWithMinLoss(filename: str):
     with open(filename, 'r') as f:
         comment = f.readline()
         hp = eval(comment[2:])
@@ -82,22 +82,18 @@ def f1MetricForHp(filename: str):
     optRow = df.loc[validLoss.idxmin(axis=0)]
     hp['optNumEpochs'] = optRow['Epoch'] + 1
     hp['optLoss'] = optRow['AvgValidLoss']
-    hp['optAccu'] = optRow['AvgValidAccu']
-    hp['optF1'] = optRow['AvgValidF1']
-    hp['optPrec'] = optRow['AvgValidPrec']
-    hp['optRecl'] = optRow['AvgValidRecl']
     f.close()
 
     return hp
 
 
 def parseHpTuning(prefix: str, gpuIdList: List[int] = [1]):
-    optHp = {'optF1': 0.0}
+    optHp = {'optLoss': 100000000.0}
     for gpuId in gpuIdList:
         path = prefix + 'Gpu%sRun*.csv' % gpuId
         for filename in glob.glob(path, recursive=False):
-            hp = f1MetricForHp(filename)
-            if hp['optF1'] > optHp['optF1']:
+            hp = hpWithMinLoss(filename)
+            if hp['optLoss'] < optHp['optLoss']:
                 optHp = deepcopy(hp)
 
     return optHp
