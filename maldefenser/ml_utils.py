@@ -266,8 +266,12 @@ def normalizeFeatures(graphs: List[S2VGraph],
         elif operation == 'zero_mean':
             g.node_features = (g.node_features - avgVector) / stdVector
         else:
-            log.error(f'Unknown operation: {operation}')
+            log.debug(f'Unknown operation: {operation}')
 
+        # delete column with only zeros
+        g.node_features = np.delete(g.node_features, 4, 1)
+
+    gHP['featureDim'] -= 1
     return [maxVector, minVector, avgVector, stdVector]
 
 
@@ -318,4 +322,3 @@ def balancedSampling(graphs, neg_ratio=3):
 def toOnehot(indices, num_classes):
     onehot = torch.zeros(indices.size(0), num_classes, device=indices.device)
     return onehot.scatter_(1, indices.unsqueeze(1), 1)
-

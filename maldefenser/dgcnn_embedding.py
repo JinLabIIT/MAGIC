@@ -15,9 +15,8 @@ from pytorch_util import weights_init, gnn_spmm
 
 class DGCNN(nn.Module):
     def __init__(self, output_dim, num_node_feats, num_edge_feats=0,
-                 latent_dim=[32, 32, 32, 1], k=30,
-                 conv1d_channels=[16, 32], conv1d_kws=[0, 5],
-                 conv1d_maxpl=[2, 2]):
+                 latent_dim=[32, 32, 32, 1], k=30, conv1d_channels=[16, 32],
+                 conv1d_kws=[0, 5], conv1d_maxpl=[2, 2]):
         """
         Args
             output_dim: dimension of the DGCNN. If equals zero, it will be
@@ -43,7 +42,8 @@ class DGCNN(nn.Module):
         self.conv_params = nn.ModuleList()
         self.conv_params.append(nn.Linear(num_node_feats, latent_dim[0]))
         for i in range(1, len(latent_dim)):
-            self.conv_params.append(nn.Linear(latent_dim[i-1], latent_dim[i]))
+            self.conv_params.append(
+                nn.Linear(latent_dim[i - 1], latent_dim[i]))
 
         self.conv1d_params1 = nn.Conv1d(1, conv1d_channels[0],
                                         conv1d_kws[0], conv1d_kws[0])
@@ -63,10 +63,11 @@ class DGCNN(nn.Module):
         weights_init(self)
 
     def forward(self, graph_list, node_feat, edge_feat):
-        graph_sizes = [graph_list[i].num_nodes for i in
-                       range(len(graph_list))]
-        node_degs = [torch.Tensor(graph_list[i].degs) + 1 for i in
-                     range(len(graph_list))]
+        graph_sizes = [graph_list[i].num_nodes for i in range(len(graph_list))]
+        node_degs = [
+            torch.Tensor(graph_list[i].degs) + 1
+            for i in range(len(graph_list))
+        ]
         node_degs = torch.cat(node_degs).unsqueeze(1)
 
         n2n_sp, e2n_sp, subg_sp = S2VLIB.PrepareMeanField(graph_list)
@@ -86,22 +87,22 @@ class DGCNN(nn.Module):
         subg_sp = Variable(subg_sp)
         node_degs = Variable(node_degs)
 
-        h = self.sortpooling_embedding(node_feat, edge_feat,
-                                       n2n_sp, e2n_sp, subg_sp, graph_sizes,
-                                       node_degs)
+        conv_graphs = self.graph_convolution_layers(node_feat, edge_feat,
+                                                    n2n_sp, e2n_sp, subg_sp,
+                                                    graph_sizes, node_degs)
+        sp_graphs = self.sortpooling_layer(conv_graphs, node_feat, subg_sp,
+                                           graph_sizes)
+        return self.remaining_layers(sp_graphs, graph_sizes)
 
-        return h
-
-    def sortpooling_embedding(self, node_feat, edge_feat,
-                              n2n_sp, e2n_sp, subg_sp, graph_sizes,
-                              node_degs):
-        ''' if exists edge feature, concatenate to node feature vector '''
+    def graph_convolution_layers(self, node_feat, edge_feat, n2n_sp, e2n_sp,
+                                 subg_sp, graph_sizes, node_degs):
+        """graph convolution layers"""
+        # if exists edge feature, concatenate to node feature vector
         if edge_feat is not None:
             input_edge_linear = self.w_e2l(edge_feat)
             e2npool_input = gnn_spmm(e2n_sp, input_edge_linear)
             node_feat = torch.cat([node_feat, e2npool_input], 1)
 
-        ''' graph convolution layers '''
         lv = 0
         cur_message_layer = node_feat
         cat_message_layers = []
@@ -114,38 +115,41 @@ class DGCNN(nn.Module):
             cat_message_layers.append(cur_message_layer)
             lv += 1
 
-        cur_message_layer = torch.cat(cat_message_layers, 1)
+        message_layers = torch.cat(cat_message_layers, 1)
+        return message_layers
 
-        ''' sortpooling layer '''
-        sort_channel = cur_message_layer[:, -1]
-        batch_sortpooling_graphs = torch.zeros(len(graph_sizes),
-                                               self.k,
-                                               self.total_latent_dim)
+    def sortpooling_layer(self, message_layers, node_feat,
+                          subg_sp, graph_sizes):
+        """sortpooling layer"""
+        sort_channel = message_layers[:, -1]
+        sp_graphs = torch.zeros(
+            len(graph_sizes), self.k, self.total_latent_dim)
         if isinstance(node_feat.data, torch.cuda.FloatTensor):
-            batch_sortpooling_graphs = batch_sortpooling_graphs.cuda()
+            sp_graphs = sp_graphs.cuda()
 
-        batch_sortpooling_graphs = Variable(batch_sortpooling_graphs)
+        sp_graphs = Variable(sp_graphs)
         accum_count = 0
         for i in range(subg_sp.size()[0]):
-            to_sort = sort_channel[accum_count: accum_count + graph_sizes[i]]
+            to_sort = sort_channel[accum_count:accum_count + graph_sizes[i]]
             k = self.k if self.k <= graph_sizes[i] else graph_sizes[i]
             _, topk_indices = to_sort.topk(k)
             topk_indices += accum_count
-            sortpooling_graph = cur_message_layer.index_select(0, topk_indices)
+            sortpooling_graph = message_layers.index_select(0, topk_indices)
             if k < self.k:
-                to_pad = torch.zeros(self.k-k, self.total_latent_dim)
+                to_pad = torch.zeros(self.k - k, self.total_latent_dim)
                 if isinstance(node_feat.data, torch.cuda.FloatTensor):
                     to_pad = to_pad.cuda()
 
                 to_pad = Variable(to_pad)
                 sortpooling_graph = torch.cat((sortpooling_graph, to_pad), 0)
-            batch_sortpooling_graphs[i] = sortpooling_graph
+            sp_graphs[i] = sortpooling_graph
             accum_count += graph_sizes[i]
 
-        ''' traditional 1d convlution and dense layers '''
-        to_conv1d = batch_sortpooling_graphs.view(
-            (-1, 1, self.k * self.total_latent_dim)
-        )
+        return sp_graphs
+
+    def remaining_layers(self, sp_graphs, graph_sizes):
+        """traditional 1d convlution and dense layers"""
+        to_conv1d = sp_graphs.view((-1, 1, self.k * self.total_latent_dim))
         conv1d_res = self.conv1d_params1(to_conv1d)
         conv1d_res = F.relu(conv1d_res)
         conv1d_res = self.maxpool1d(conv1d_res)
