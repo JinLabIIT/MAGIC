@@ -12,53 +12,52 @@ from typing import Dict, List
 from mlp_dropout import MLPClassifier, RecallAtPrecision, LogisticRegression
 from embedding import EmbedMeanField, EmbedLoopyBP
 from ml_utils import cmd_args, gHP, S2VGraph
-
+from graph_vgg import getGraphVggBn
 
 class Classifier(nn.Module):
     def __init__(self):
         super(Classifier, self).__init__()
-        if cmd_args.gm == 'mean_field':
-            model = EmbedMeanField
-        elif cmd_args.gm == 'loopy_bp':
-            model = EmbedLoopyBP
-        elif cmd_args.gm == 'DGCNN':
-            model = DGCNN
-        else:
-            log.fatal('Unknown graph embedding model: %s' % cmd_args.gm)
-            sys.exit()
-
         nodeFeatDim = gHP['featureDim'] + gHP['nodeTagDim']
-        if cmd_args.gm == 'DGCNN':
-            self.s2v = model(latent_dim=gHP['graphConvSize'],
+        if gHP['poolingType'] == 'adaptive':
+            self.s2v = DGCNN(latent_dim=gHP['graphConvSize'],
                              output_dim=gHP['s2vOutDim'],
                              num_node_feats=nodeFeatDim,
-                             k=gHP['sortPoolingK'],
+                             k=gHP['poolingK'],
+                             conv2d_changel=gHP['conv2dChannels'],
+                             pooling_layer=gHP['poolingType'])
+            gHP['vggInputDim'] = (gHP['poolingK'],
+                                  self.s2v.total_latent_dim,
+                                  gHP['conv2dChannels'])
+            self.mlp = getGraphVggBn(inputDims=gHP['vggInputDim'],
+                                     hidden=gHP['mlpHidden'],
+                                     numClasses=gHP['numClasses'],
+                                     dropOutRate=gHP['dropOutRate'])
+        else:
+            self.s2v = DGCNN(latent_dim=gHP['graphConvSize'],
+                             output_dim=gHP['s2vOutDim'],
+                             num_node_feats=nodeFeatDim,
+                             k=gHP['poolingK'],
+                             pooling_layer='sort',
                              conv1d_channels=gHP['convChannels'],
                              conv1d_kws=gHP['convKernSizes'],
-                             conv1d_maxpl=gHP['convMaxPool'])
-        else:
-            self.s2v = model(latent_dim=gHP['graphConvSize'],
-                             output_dim=gHP['s2vOutDim'],
-                             num_node_feats=gHP['featureDim'],
-                             num_edge_feats=0,
-                             max_lv=gHP['msgPassLv'])
+                             conv1d_maxpl=gHP['convMaxPool'],
+                             remaining_layers=gHP['remLayers'])
+            if gHP['s2vOutDim'] == 0:
+                gHP['s2vOutDim'] = self.s2v.dense_dim
 
-        if gHP['s2vOutDim'] == 0:
-            gHP['s2vOutDim'] = self.s2v.dense_dim
-
-        if cmd_args.mlp_type == 'rap':
-            self.mlp = RecallAtPrecision(input_size=gHP['s2vOutDim'],
+            if gHP['mlpType'] == 'rap':
+                self.mlp = RecallAtPrecision(input_size=gHP['s2vOutDim'],
+                                             hidden_size=gHP['mlpHidden'],
+                                             alpha=0.6,
+                                             dropout=gHP['dropOutRate'])
+            elif gHP['mlpType'] == 'logistic_reg':
+                self.mlp = LogisticRegression(input_size=gHP['s2vOutDim'],
+                                              num_labels=gHP['numClasses'])
+            else:
+                self.mlp = MLPClassifier(input_size=gHP['s2vOutDim'],
                                          hidden_size=gHP['mlpHidden'],
-                                         alpha=0.6,
+                                         num_class=gHP['numClasses'],
                                          dropout=gHP['dropOutRate'])
-        elif cmd_args.mlp_type == 'logistic_reg':
-            self.mlp = LogisticRegression(input_size=gHP['s2vOutDim'],
-                                          num_labels=gHP['numClasses'])
-        else:
-            self.mlp = MLPClassifier(input_size=gHP['s2vOutDim'],
-                                     hidden_size=gHP['mlpHidden'],
-                                     num_class=gHP['numClasses'],
-                                     dropout=gHP['dropOutRate'])
 
     def _prepareFeatureLabel(self, batch_graph):
         labels = torch.LongTensor(len(batch_graph))

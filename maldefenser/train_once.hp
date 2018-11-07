@@ -1,16 +1,29 @@
 # DGCNN HPs
-sortPoolingRatio = [0.75]
-s2vOutDim = [128]
-graphConvSize = [[32, 32, 32, 1]]
+poolingRatio = [0.6]
+graphConvSize = [[32, 32, 32, 32]]
+poolingType = ['adaptive']
+conv2dChannels = [16]
+
+# Used ONLY if pooling == 'sort'
+remLayers = ['conv1d']
+
+# Used ONLY if remLayers == 'conv1d'
+s2vOutDim = [64]
 convChannels = [[16, 32]]
 convKernSizes = [[0, 5]]
 convMaxPool = [[2, 2]]
 
+# MLP
+# rap, vanilla
+mlpType= ['vanilla']
+mlpHidden = [256]
+dropOutRate = [0.32]
+
 # Training HPs
 lr = [0.0001]
-batchSize = [40]
+batchSize = [20]
 cvFold = [5]
-numEpochs = [80]
-l2RegFactor = [0.0]
+numEpochs = [100]
+l2RegFactor = [0.001]
 
 noteMsg = ["Logistic Reg"]

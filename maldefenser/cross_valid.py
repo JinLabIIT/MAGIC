@@ -103,7 +103,7 @@ if __name__ == '__main__':
 
     startTime = time.process_time()
     graphs = loadGraphsMayCache(cmd_args.train_dir)
-    normalizeFeatures(graphs, useCachedTrain=True, operation='delete_zero')
+    normalizeFeatures(graphs, useCachedTrain=True, operation='zero_mean')
     dataReadyTime = time.process_time() - startTime
     log.info('Dataset ready takes %.2fs' % dataReadyTime)
 
@@ -112,8 +112,8 @@ if __name__ == '__main__':
             gHP[key] = val
 
         numNodesList = sorted([g.num_nodes for g in graphs])
-        idx = int(math.ceil(hp['sortPoolingRatio'] * len(graphs))) - 1
-        gHP['sortPoolingK'] = numNodesList[idx]
+        idx = int(math.ceil(hp['poolingRatio'] * len(graphs))) - 1
+        gHP['poolingK'] = numNodesList[idx]
 
         kFoldGraphs = kFoldSplit(gHP['cvFold'], graphs)
         crossValidate(kFoldGraphs, id)
