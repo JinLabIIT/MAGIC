@@ -1,4 +1,8 @@
 #!/usr/bin/python3.7
+"""
+Borrowed from and rewritten based on Muhan's pytorch_DGCNN repo at
+https://github.com/muhanzhang/pytorch_DGCNN
+"""
 import argparse
 import random
 import torch
