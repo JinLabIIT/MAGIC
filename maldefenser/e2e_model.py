@@ -1,4 +1,8 @@
 #!/usr/bin/python3.7
+"""
+Borrowed from and rewritten based on Muhan's pytorch_DGCNN repo at
+https://github.com/muhanzhang/pytorch_DGCNN
+"""
 import sys
 import torch
 import math
@@ -19,31 +23,31 @@ class Classifier(nn.Module):
         super(Classifier, self).__init__()
         nodeFeatDim = gHP['featureDim'] + gHP['nodeTagDim']
         if gHP['poolingType'] == 'adaptive':
-            self.s2v = DGCNN(latent_dim=gHP['graphConvSize'],
-                             output_dim=gHP['s2vOutDim'],
-                             num_node_feats=nodeFeatDim,
+            self.s2v = DGCNN(latentDims=gHP['graphConvSize'],
+                             outputDim=gHP['s2vOutDim'],
+                             numNodeFeats=nodeFeatDim,
                              k=gHP['poolingK'],
-                             conv2d_changel=gHP['conv2dChannels'],
-                             pooling_layer=gHP['poolingType'])
+                             conv2dChannel=gHP['conv2dChannels'],
+                             poolingType=gHP['poolingType'])
             gHP['vggInputDim'] = (gHP['poolingK'],
-                                  self.s2v.total_latent_dim,
+                                  self.s2v.totalLatentDim,
                                   gHP['conv2dChannels'])
             self.mlp = getGraphVggBn(inputDims=gHP['vggInputDim'],
                                      hidden=gHP['mlpHidden'],
                                      numClasses=gHP['numClasses'],
                                      dropOutRate=gHP['dropOutRate'])
         else:
-            self.s2v = DGCNN(latent_dim=gHP['graphConvSize'],
-                             output_dim=gHP['s2vOutDim'],
-                             num_node_feats=nodeFeatDim,
+            self.s2v = DGCNN(latentDims=gHP['graphConvSize'],
+                             outputDim=gHP['s2vOutDim'],
+                             numNodeFeats=nodeFeatDim,
                              k=gHP['poolingK'],
-                             pooling_layer='sort',
-                             conv1d_channels=gHP['convChannels'],
-                             conv1d_kws=gHP['convKernSizes'],
-                             conv1d_maxpl=gHP['convMaxPool'],
-                             remaining_layers=gHP['remLayers'])
+                             poolingType='sort',
+                             endingLayers=gHP['remLayers'],
+                             conv1dChannels=gHP['convChannels'],
+                             conv1dKernSz=gHP['convKernSizes'],
+                             conv1dMaxPl=gHP['convMaxPool'])
             if gHP['s2vOutDim'] == 0:
-                gHP['s2vOutDim'] = self.s2v.dense_dim
+                gHP['s2vOutDim'] = self.s2v.denseDim
 
             if gHP['mlpType'] == 'rap':
                 self.mlp = RecallAtPrecision(input_size=gHP['s2vOutDim'],
@@ -117,16 +121,16 @@ class Classifier(nn.Module):
 
     def forward(self, batch_graph):
         node_feat, labels = self._prepareFeatureLabel(batch_graph)
-        embed = self.s2v(batch_graph, node_feat, edge_feat=None)
+        embed = self.s2v(batch_graph, node_feat, edgeFeats=None)
         return self.mlp(embed, labels)
 
     def embedding(self, graphs):
         node_feat, _ = self._prepareFeatureLabel(graphs)
-        return self.s2v(graphs, node_feat, edge_feat=None)
+        return self.s2v(graphs, node_feat, edgeFeats=None)
 
     def predict(self, testGraphs):
         nodeFeature, _ = self._prepareFeatureLabel(testGraphs)
-        embed = self.s2v(testGraphs, nodeFeature, edge_feat=None)
+        embed = self.s2v(testGraphs, nodeFeature, edgeFeats=None)
         return self.mlp(embed)
 
     def sgdModel(self, optimizer, batch_graph, pos):
