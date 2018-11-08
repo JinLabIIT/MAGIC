@@ -14,6 +14,7 @@ from ml_utils import cmd_args, gHP, S2VGraph, normalizeFeatures
 from ml_utils import computePrScores, loadGraphsMayCache, kFoldSplit
 from e2e_model import Classifier, loopDataset
 from hyperparameters import HyperParameterIterator, parseHpTuning
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 
 def trainThenValid(trainGraphs, validGraphs):
@@ -23,27 +24,30 @@ def trainThenValid(trainGraphs, validGraphs):
     if cmd_args.mode == 'gpu':
         classifier = classifier.cuda()
 
-    optimizer = optim.Adam(classifier.parameters(),
-                           lr=gHP['lr'], weight_decay=gHP['l2RegFactor'])
-
+    optimizer = optim.SGD(classifier.parameters(),
+                          lr=gHP['lr'], momentum=0.9,
+                          weight_decay=gHP['l2RegFactor'])
+    scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5,
+                                  patience=4, verbose=True)
     trainIndices = list(range(len(trainGraphs)))
     validIndices = list(range(len(validGraphs)))
     trainLossHist, validLossHist = [], []
 
     startTime = time.process_time()
-    for epoch in range(gHP['numEpochs']):
+    for i in range(gHP['numEpochs']):
         random.shuffle(trainIndices)
         classifier.train()
         avgScore, trainPred, trainLabels = loopDataset(
             trainGraphs, classifier, trainIndices, optimizer=optimizer)
-        print('\033[92mTrain epoch %d: loss %.6f\033[0m' % (epoch, avgScore[0]))
+        print('\033[92mTrain epoch %d: loss %.6f\033[0m' % (i, avgScore[0]))
         trainLossHist.append(avgScore[0])
 
         classifier.eval()
         validScore, validPred, validLabels = loopDataset(
             validGraphs, classifier, validIndices)
-        print('\033[93mValid epoch %d: loss %.6f\033[0m' % (epoch, validScore[0]))
+        print('\033[93mValid epoch %d: loss %.6f\033[0m' % (i, validScore[0]))
         validLossHist.append(validScore[0])
+        scheduler.step(validScore[0])
 
     log.info(f'Net training time = {time.process_time() - startTime} seconds')
     hist = {}

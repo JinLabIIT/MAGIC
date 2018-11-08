@@ -14,7 +14,8 @@ from ml_utils import cmd_args, gHP, kFoldSplit
 from ml_utils import computePrScores, loadGraphsMayCache
 from ml_utils import storeConfusionMatrix, normalizeFeatures
 from e2e_model import Classifier, loopDataset, predictDataset
-from hyperparameters import parseHpTuning
+from hyperparameters import parseHpTuning, HyperParameterIterator
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 
 def exportRandomPredictions(graphs):
@@ -84,16 +85,17 @@ def exportPredictions(graphs, predProb, epoch=None):
     output.close()
 
 
-def trainThenPredict(trainSet, testGraphs) -> Dict[str, float]:
+def trainThenPredict(trainSet, testGraphs, numEpochs) -> Dict[str, float]:
     classifier = Classifier()
-
     log.info(f'Global hyperparameter setting: {gHP}')
     if cmd_args.mode == 'gpu':
         classifier = classifier.cuda()
 
-    optimizer = optim.Adam(classifier.parameters(),
-                           lr=gHP['lr'], weight_decay=gHP['l2RegFactor'])
-
+    optimizer = optim.SGD(classifier.parameters(),
+                          lr=gHP['lr'], momentum=0.9,
+                          weight_decay=gHP['l2RegFactor'])
+    scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5,
+                                  patience=2, verbose=True)
     kFoldGraphs = kFoldSplit(max(gHP['cvFold'], 5), trainSet)
     trainGraphs = []
     for foldGraphs in kFoldGraphs[:-1]:
@@ -109,15 +111,13 @@ def trainThenPredict(trainSet, testGraphs) -> Dict[str, float]:
     validPrecHist, validRecallHist, validF1Hist = [], [], []
 
     startTime = time.process_time()
-    for epoch in range(int(gHP['optNumEpochs'])):
+    for e in range(numEpochs):
         random.shuffle(trainIndices)
         classifier.train()
         avgScore, trainPred, trainLabels = loopDataset(
             trainGraphs, classifier, trainIndices, optimizer=optimizer)
         prScore = computePrScores(trainPred, trainLabels, 'train')
-        print('\033[92mTrain epoch %d: l %.5f a %.5f p %.5f r %.5f\033[0m' %
-              (epoch, avgScore[0], avgScore[1], prScore['precisions'],
-               prScore['recalls']))
+        print('\033[92mTrain epoch %d: l %.5f\033[0m' % (e, avgScore[0]))
         trainLossHist.append(avgScore[0])
         trainAccuHist.append(avgScore[1])
         trainPrecHist.append(prScore['precisions'])
@@ -127,20 +127,20 @@ def trainThenPredict(trainSet, testGraphs) -> Dict[str, float]:
         classifier.eval()
         validScore, validPred, validLabels = loopDataset(
             validGraphs, classifier, validIndices)
+        scheduler.step(validScore[0])
+
         prScore = computePrScores(validPred, validLabels, 'valid')
-        print('\033[93mValid epoch %d: l %.5f a %.5f p %.5f r %.5f\033[0m' %
-              (epoch, validScore[0], validScore[1],
-               prScore['precisions'], prScore['recalls']))
+        print('\033[93mValid epoch %d: l %.5f\033[0m' % (e, validScore[0]))
         validLossHist.append(validScore[0])
         validAccuHist.append(validScore[1])
         validPrecHist.append(prScore['precisions'])
         validRecallHist.append(prScore['recalls'])
         validF1Hist.append(prScore['weightedF1'])
 
-        if epoch % 10 == 0:
+        if e % 10 == 0:
             classifier.eval()
             testPredProb = predictDataset(testGraphs, classifier)
-            exportPredictions(testGraphs, testPredProb, epoch)
+            exportPredictions(testGraphs, testPredProb, e)
 
     log.info(f'Net training time = {time.process_time() - startTime} seconds')
     storeConfusionMatrix(trainPred, trainLabels, 'train')
@@ -171,6 +171,32 @@ def trainThenPredict(trainSet, testGraphs) -> Dict[str, float]:
     exportPredictions(testGraphs, testPredProb)
 
 
+def decideHyperparameters(graphs) -> int:
+    if cmd_args.hp_path == 'none':
+        log.info(f'Using previous CV results to decide hyperparameters')
+        optHp = parseHpTuning(cmd_args.data)
+        log.info(f'Optimal hyperparameter setting: {optHp}')
+        for (key, val) in optHp.items():
+            if key not in gHP:
+                log.debug(f'Add {key} = {val} to global HP')
+            elif gHP[key] != val:
+                log.debug(f'Replace {key} from {gHP[key]} to {val}')
+
+            gHP[key] = val
+
+        return gHP['optNumEpochs']
+    else:
+        log.info(f'Using 1st hyperparameter setting from {cmd_args.hp_path}')
+        hpIter = HyperParameterIterator(cmd_args.hp_path)
+        hp = next(hpIter)
+        for (key, val) in hp.items():
+            gHP[key] = val
+
+        numNodesList = sorted([g.num_nodes for g in graphs])
+        idx = int(math.ceil(hp['poolingRatio'] * len(graphs))) - 1
+        gHP['poolingK'] = numNodesList[idx]
+        return gHP['numEpochs']
+
 if __name__ == '__main__':
     log.setLevel("INFO")
     random.seed(cmd_args.seed)
@@ -178,25 +204,16 @@ if __name__ == '__main__':
     torch.manual_seed(cmd_args.seed)
 
     startTime = time.process_time()
-    trainGraphs = loadGraphsMayCache(cmd_args.train_dir, False)
-    normalizeFeatures(trainGraphs, useCachedTrain=True, operation='zero_mean')
-    dataReadyTime = time.process_time() - startTime
-    log.info('Trainset ready takes %.2fs' % dataReadyTime)
-
-    startTime = time.process_time()
     testGraphs = loadGraphsMayCache(cmd_args.test_dir, True)
     normalizeFeatures(testGraphs, useCachedTest=True, operation='zero_mean')
     dataReadyTime = time.process_time() - startTime
     log.info('Testset ready takes %.2fs' % dataReadyTime)
 
-    optHp = parseHpTuning(cmd_args.data)
-    log.info(f'Optimal hyperparameter setting: {optHp}')
-    for (key, val) in optHp.items():
-        if key not in gHP:
-            log.debug(f'Add {key} = {val} to global HP')
-        elif gHP[key] != val:
-            log.debug(f'Replace {key} from {gHP[key]} to {val}')
+    startTime = time.process_time()
+    trainGraphs = loadGraphsMayCache(cmd_args.train_dir, False)
+    normalizeFeatures(trainGraphs, useCachedTrain=True, operation='zero_mean')
+    dataReadyTime = time.process_time() - startTime
+    log.info('Trainset ready takes %.2fs' % dataReadyTime)
 
-        gHP[key] = val
-
-    trainThenPredict(trainGraphs, testGraphs)
+    numEpochs = decideHyperparameters(trainGraphs)
+    trainThenPredict(trainGraphs, testGraphs, numEpochs)

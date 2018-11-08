@@ -22,7 +22,8 @@ cmd_opt = argparse.ArgumentParser(
 cmd_opt.add_argument('-mode', default='cpu', help='cpu/gpu')
 cmd_opt.add_argument('-gpu_id', default=1,
                      help='on which gpu the model is trained, in {0, 1, 2, 3}')
-cmd_opt.add_argument('-gm', default='mean_field', help='mean_field/loopy_bp')
+cmd_opt.add_argument('-gm', default='dgcnn',
+                     help='Type of graph model: dgcnn|mean_field|loopy_bp')
 cmd_opt.add_argument('-data', default=None, help='txt data name')
 cmd_opt.add_argument('-train_dir', default='../TrainSet',
                      help='folder for trainset')
@@ -30,12 +31,12 @@ cmd_opt.add_argument('-test_dir', default='../TestSet',
                      help='folder for testset')
 cmd_opt.add_argument('-seed', type=int, default=1, help='seed')
 cmd_opt.add_argument('-mlp_type', type=str, default='vanilla',
-                     help='Type of regression MLP: RAP or vanilla')
+                     help='Type of regression MLP: vanilla|rap|vgg')
 cmd_opt.add_argument('-use_cached_data', type=str, default='False',
                      help='whether to use previously cached dataset')
 cmd_opt.add_argument('-cache_path', type=str, default='cached_graphs.pkl',
                      help='which cached data to use')
-cmd_opt.add_argument('-hp_path', type=str, default='hp.txt',
+cmd_opt.add_argument('-hp_path', type=str, default='none',
                      help='raw hyperparameter values')
 gHP = dict()
 cmd_args, _ = cmd_opt.parse_known_args()

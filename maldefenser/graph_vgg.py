@@ -2,13 +2,25 @@
 import glog as log
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.utils.model_zoo as model_zoo
+from typing import Dict, List
 from torch.autograd import Variable
-
 """
 VGG for the output of graph convolution layers,
 most of the code is borrowed from
 https://github.com/pytorch/vision/blob/master/torchvision/models/vgg.py
 """
+
+ModelUrls = {
+    'vgg11': 'https://download.pytorch.org/models/vgg11-bbd30ac9.pth',
+    'vgg11_bn': 'https://download.pytorch.org/models/vgg11_bn-6002323d.pth',
+}
+
+VggCfgs = {
+    'vgg11': [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
+    'vggg': [16, 'M', 32, 32, 'M', 64, 64, 'M'],
+}
+
 
 class GraphVgg(nn.Module):
     def __init__(self, convLayers, featDim, hidden=128, numClasses=9,
@@ -52,8 +64,8 @@ class GraphVgg(nn.Module):
     def _initialize_weights(self):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out',
-                                        nonlinearity='leaky_relu')
+                nn.init.kaiming_normal_(m.weight,
+                                        mode='fan_out', nonlinearity='relu')
                 if m.bias is not None:
                     nn.init.constant_(m.bias, 0)
             elif isinstance(m, nn.BatchNorm2d):
@@ -64,7 +76,7 @@ class GraphVgg(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
 
-def makeVggLayers(cfg, inputDims, batchNorm=False):
+def makeVggLayers(cfg: List[str], inputDims: List[int], batchNorm=False):
     layers = []
     hout, wout, channels = inputDims
     for v in cfg:
@@ -85,17 +97,20 @@ def makeVggLayers(cfg, inputDims, batchNorm=False):
     log.info(f'VGG-Conv output dims: H({hout}), W({wout}), C({channels})')
     return (nn.Sequential(*layers), hout * wout * channels)
 
-VggCfgs = {
-    'A': [16, 16, 'M', 32, 32, 'M'],
-}
 
-def getGraphVgg(inputDims, **kwargs):
-    layers, outDim = makeVggLayers(VggCfgs['A'], inputDims)
+def getGraphVgg(inputDims: List[int], pretrained=False, **kwargs):
+    layers, outDim = makeVggLayers(VggCfgs['vggg'], inputDims)
     model = GraphVgg(layers, outDim, **kwargs)
+    if pretrained:
+        model.load_state_dict(model_zoo.load_url(ModelUrls['vgg11']))
+
     return model
 
 
-def getGraphVggBn(inputDims, **kwargs):
-    layers, outDim = makeVggLayers(VggCfgs['A'], inputDims, batchNorm=True)
+def getGraphVggBn(inputDims: List[int], pretrained=False, **kwargs):
+    layers, outDim = makeVggLayers(VggCfgs['vggg'], inputDims, batchNorm=True)
     model = GraphVgg(layers, outDim, **kwargs)
+    if pretrained:
+        model.load_state_dict(model_zoo.load_url(ModelUrls['vgg11_bn']))
+
     return model

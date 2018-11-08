@@ -21,7 +21,7 @@ class DGCNN(nn.Module):
     def __init__(self, outputDim, numNodeFeats, numEdgeFeats=0,
                  latentDims=[32, 32, 32, 1], k=30,
                  poolingType='sort', endingLayers='conv1d',
-                 conv2dChannel=16,
+                 conv2dChannel=64,
                  conv1dChannels=[16, 32],
                  conv1dKernSz=[0, 5], conv1dMaxPl=[2, 2]):
         """
@@ -38,6 +38,7 @@ class DGCNN(nn.Module):
             conv2dChannel: channel dimension of the 2d conv layer
                            before adaptive max pooling.
                            NOT used if pooling layer is 'sort'.
+                           Default 64 to compatible with VGG11.
             conv1dChannels: channel dimension of the 2 conv1d layers
             conv1dKernSz: kernel size of the 2 1d conv layers.
                           conv1dKernSz[0] is manually set to sum(latentDims).
