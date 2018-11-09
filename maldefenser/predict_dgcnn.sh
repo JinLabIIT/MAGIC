@@ -1,10 +1,10 @@
 #!/bin/bash
 
-GPU="${1-1}"  # select the GPU number, 0-3
-HP_PATH="${2-none}"
+DATA=${1-MSACFG}
+GPU="${2-1}"  # select the GPU number, 0-3
+HP_PATH="${3-none}"
 
 # general/default settings
-DATA=MSACFG
 gpu_or_cpu=gpu
 cache_path=cached_${DATA,,}_graphs
 train_dir=../TrainSet
@@ -17,6 +17,7 @@ CUDA_VISIBLE_DEVICES=${GPU} python3.7 tuned_model.py        \
   -train_dir ${train_dir}                                   \
   -test_dir ${test_dir}                                     \
   -mode ${gpu_or_cpu}                                       \
+  -gpu_id ${GPU}                                            \
   -use_cached_data ${use_cached_data}                       \
   -cache_path ${cache_path}                                 \
   -hp_path ${HP_PATH}

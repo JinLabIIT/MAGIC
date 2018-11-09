@@ -81,9 +81,9 @@ def makeVggLayers(cfg: List[str], inputDims: List[int], batchNorm=False):
     hout, wout, channels = inputDims
     for v in cfg:
         if v == 'M':
-            layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
-            hout = (hout + 2 * 0 - (2 - 1) - 1) // 2 + 1
-            wout = (wout + 2 * 0 - (2 - 1) - 1) // 2 + 1
+            layers += [nn.MaxPool2d(kernel_size=3, stride=2)]
+            hout = (hout + 2 * 0 - (3 - 1) - 1) // 2 + 1
+            wout = (wout + 2 * 0 - (3 - 1) - 1) // 2 + 1
         else:
             conv2d = nn.Conv2d(channels, v, kernel_size=3, padding=1)
             if batchNorm:

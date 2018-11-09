@@ -1,9 +1,9 @@
 #!/bin/bash
 
-GPU="${1-1}"  # select the GPU number, 0-3
+DATA=${1-MSACFG}
+GPU="${2-1}"  # select the GPU number, 0-3
 
 # general/default settings
-DATA=MSACFG
 gpu_or_cpu=gpu
 cache_path=cached_${DATA,,}_graphs
 # hp_path=full_gpu${GPU}.hp

@@ -36,6 +36,7 @@ def trainThenValid(trainGraphs, validGraphs):
     startTime = time.process_time()
     for i in range(gHP['numEpochs']):
         random.shuffle(trainIndices)
+        log.debug(f'First 10 train indices: {trainIndices[:10]}')
         classifier.train()
         avgScore, trainPred, trainLabels = loopDataset(
             trainGraphs, classifier, trainIndices, optimizer=optimizer)

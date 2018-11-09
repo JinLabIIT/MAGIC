@@ -63,9 +63,8 @@ class DGCNN(nn.Module):
             log.info(f'Unify graph sizes with ADAPTIVE pooling')
             self.conv2dParam = nn.Conv2d(in_channels=1,
                                          out_channels=conv2dChannel,
-                                         kernel_size=3, padding=1)
-            self.adptPl = nn.AdaptiveMaxPool2d((self.k,
-                                                  self.totalLatentDim))
+                                         kernel_size=13, stride=1, padding=6)
+            self.adptPl = nn.AdaptiveMaxPool2d((self.k, self.totalLatentDim))
         else:
             log.info(f'Unify graph sizes with SORT pooling')
             self.endingLayers = endingLayers
@@ -143,7 +142,7 @@ class DGCNN(nn.Module):
             n2npool = gnn_spmm(n2nSp, currMsgLayer) + currMsgLayer
             nodeLinear = self.graphConvParams[lv](n2npool)  # Y = Y * W
             normalizedLinear = nodeLinear.div(nodeDegs)  # Y = D^-1 * Y
-            currMsgLayer = F.tanh(normalizedLinear)
+            currMsgLayer = torch.tanh(normalizedLinear)
             msgLayers.append(currMsgLayer)
             lv += 1
 
