@@ -1,14 +1,6 @@
-
-# coding: utf-8
-
-# In[3]:
-
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
+#/usr/bin/python3.7
 import glob
+import glog as log
 import os
 import pickle as pkl
 import numpy as np
@@ -18,26 +10,19 @@ from collections import Counter
 from networkx import number_of_nodes, adjacency_matrix
 from node_attributes import node_features
 
-class_dirnames = glob.glob('AllCfg/*')
+class_dirnames = glob.glob('../IdaPro/AllCfg/*')
 print(class_dirnames)
-
-
-# In[4]:
-
-
-class_names = sorted(['Rbot', 'Koobface', 'Sdbot', 'Swizzor', 'Lmir', 'Bagle', 'Zbot', 
-               'Bifrose', 'Ldpinch', 'Hupigon', 'Benign', 'Vundo', 'Zlob'])
+class_names = sorted(['Rbot', 'Koobface', 'Sdbot', 'Swizzor', 'Lmir',
+                      'Bagle', 'Zbot', 'Bifrose', 'Ldpinch', 'Hupigon',
+                      'Benign', 'Vundo', 'Zlob'])
 graph_sizes = {x: [] for x in class_names}
-output_dir = 'AllAcfg/'
+output_dir = '../IdaPro/AllAcfg/'
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
     print('mkdir %s' % output_dir)
 
 graph_pathnames = []
 print(str(len(class_names)) + " types of CFGs: " + str(class_names))
-
-
-# In[42]:
 
 
 """Path name format: class/graph_id/pkl_name"""
@@ -47,14 +32,14 @@ for class_dirname in class_dirnames:
     class_name = class_dirname.split('/')[1]
     if class_name not in class_names:
         continue
-    
+
     print("Processing %s CFGs" % class_name)
     pkl_pathnames = glob.glob(class_dirname + '/*')
-    
+
     if len(pkl_pathnames) == 0:
         print('[Warning] %s is empty' % data_dirname)
 
-    for pkl_pathname in pkl_pathnames:        
+    for pkl_pathname in pkl_pathnames:
         if pkl_pathname[-8:] != '.gpickle':
             print('[Warning] %s is not gpickle file' % pkl_pathname)
             continue
@@ -113,4 +98,3 @@ def plot_hist_in_range(data, left=1, right=200):
 max_graph_size = max(data.max())
 print("maximum graph size =", max_graph_size)
 plot_hist_in_range(data, right=600)
-
