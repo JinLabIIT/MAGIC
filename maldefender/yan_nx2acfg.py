@@ -6,87 +6,18 @@ import pickle as pkl
 import numpy as np
 import scipy as sp
 import pandas as pd
+import networkx as nx
+from typing import List, Dict
 from collections import Counter
 from networkx import number_of_nodes, adjacency_matrix
-from node_attributes import node_features
-
-class_dirnames = glob.glob('../IdaPro/AllCfg/*')
-print(class_dirnames)
-class_names = sorted(['Rbot', 'Koobface', 'Sdbot', 'Swizzor', 'Lmir',
-                      'Bagle', 'Zbot', 'Bifrose', 'Ldpinch', 'Hupigon',
-                      'Benign', 'Vundo', 'Zlob'])
-graph_sizes = {x: [] for x in class_names}
-output_dir = '../IdaPro/AllAcfg/'
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
-    print('mkdir %s' % output_dir)
-
-graph_pathnames = []
-print(str(len(class_names)) + " types of CFGs: " + str(class_names))
-
-
-"""Path name format: class/graph_id/pkl_name"""
-graph_pathnames_output = open(output_dir + 'graph_pathnames.csv', 'wb')
-total = 0
-for class_dirname in class_dirnames:
-    class_name = class_dirname.split('/')[1]
-    if class_name not in class_names:
-        continue
-
-    print("Processing %s CFGs" % class_name)
-    pkl_pathnames = glob.glob(class_dirname + '/*')
-
-    if len(pkl_pathnames) == 0:
-        print('[Warning] %s is empty' % data_dirname)
-
-    for pkl_pathname in pkl_pathnames:
-        if pkl_pathname[-8:] != '.gpickle':
-            print('[Warning] %s is not gpickle file' % pkl_pathname)
-            continue
-
-        total += 1
-        graph_pathnames_output.write(pkl_pathname + '\n')
-
-        G = pkl.load(open(pkl_pathname, 'rb'))
-        graph_sizes[class_name].append(number_of_nodes(G))
-        graph_id = pkl_pathname.split('/')[2][:-8] # ignore '.gpickle'
-
-        features = node_features(G)
-        np.savetxt(output_dir + graph_id + '.features.txt', features, fmt="%d")
-        np.savetxt(output_dir + graph_id + '.label.txt', np.array([class_name]), fmt="%s")
-        # np.savetxt(output_dir + graph_id + '.adjacent.txt', adjacency_matrix(G).todense(), fmt="%d")
-        sp.sparse.save_npz(output_dir + graph_id + '.adjacent', adjacency_matrix(G))
-
-print("%d CFGs" % total)
-graph_size_pd = pd.DataFrame.from_dict(graph_sizes, orient='index').T
-graph_size_pd.to_csv(output_dir + 'graph_sizes.csv', index=False, header=True)
-
-
-# In[6]:
-
-
+from yan_attributes import nodeFeatures
 from matplotlib import pyplot as plt
-import numpy as np
-import pandas as pd
-
-data = pd.read_csv(output_dir + 'graph_sizes.csv', header=0)
-label_cnts = {key: data[key].count() for key in class_names}
-print("Graph size distribution by class:")
-print(label_cnts)
-print("Total #graphs:", sum(label_cnts.values()))
-
-max_graph_sizes = data.max()
-print("Max graph size for each class:")
-print(max_graph_sizes)
 
 
-# In[18]:
-
-
-def plot_hist_in_range(data, left=1, right=200):
+def plotHistgramInRange(data, left=1, right=200):
     for column in data:
         df = data[column].dropna()
-        max_num_nodes = df.max()
+        maxNumNodes = df.max()
         plt.hist(df, bins=np.arange(left, right, 1), density=False,
                  histtype='step', label=column)
 
@@ -95,6 +26,82 @@ def plot_hist_in_range(data, left=1, right=200):
     plt.grid(True)
     plt.show()
 
-max_graph_size = max(data.max())
-print("maximum graph size =", max_graph_size)
-plot_hist_in_range(data, right=600)
+
+def summaryGraphSizes(dirname: str, malwareNames: List[str]):
+    data = pd.read_csv(dirname + 'graphSizes.csv', header=0)
+    cntsByName = {key: data[key].count() for key in malwareNames}
+    log.info("Graph size distribution by class:")
+    log.info(cntsByName)
+    log.info(f"Total #graphs: {sum(cntsByName.values())}")
+
+    maxGraphSizes = data.max()
+    log.info("Max graph size for each class:")
+    log.info(maxGraphSizes)
+    maxGraphSizes = max(data.max())
+    log.info(f"maximum graph size = {maxGraphSizes}")
+    plotHistgramInRange(data, right=600)
+
+
+def nxCfg2Acfg(outputDir: str, malwareDirPrefix: str) -> None:
+    """Path name format: class/graphId/pkl_name"""
+    logGraphPaths = open(outputDir + '/graph_pathnames.csv', 'w')
+    graphSizes = {x: [] for x in malwareNames}
+    total = 0
+    for malwareDirname in glob.glob(malwareDirPrefix + '/*'):
+        log.debug(f'Enter malware directory {malwareDirname}')
+        malwareName = malwareDirname.split('/')[-1]
+        if malwareName not in malwareNames:
+            log.warning(f'{malwareName} not in known malware types')
+            continue
+
+        log.info(f"Processing {malwareName} CFGs")
+        pklPaths = glob.glob(malwareDirname + '/*')
+
+        if len(pklPaths) == 0:
+            log.warning(f'{pklPaths} is empty')
+
+        for pklPath in pklPaths[:4]:
+            if pklPath[-8:] != '.gpickle':
+                log.warning(f'{pklPath} is not gpickle file')
+                continue
+
+            log.debug(f'Loading nx.Graph from {pklPath}')
+            total += 1
+            logGraphPaths.write(pklPath + '\n')
+
+            try:
+                G = nx.read_gpickle(pklPath)
+            except UnicodeDecodeError as e:
+                log.error(f'Decode failed for gpickle file {pklPath}: {e}')
+                continue
+
+            graphSizes[malwareName].append(number_of_nodes(G))
+            graphId = pklPath.split('/')[-1][:-8] # ignore '.gpickle'
+            prefix = outputDir + '/' + graphId
+
+            log.debug(f'Writing feature/label/adj for {graphId}')
+            features = nodeFeatures(G)
+            np.savetxt(prefix + '.features.txt', features, fmt="%d")
+            np.savetxt(prefix + '.label.txt', [malwareName], fmt="%s")
+            sp.sparse.save_npz(prefix + '.adjacent', adjacency_matrix(G))
+
+    log.info(f"Processed {total} CFGs")
+    graphSizesDf = pd.DataFrame.from_dict(graphSizes, orient='index').T
+    graphSizesDf.to_csv(outputDir + '/graph_sizes.csv', index=False)
+
+
+def iterAllDirectories(cfgDirPrefix: str = '../../IdaProCfg/AllCfg',
+                       outputDir: str = '../../IdaProCfg/AllAcfg'):
+    if not os.path.exists(outputDir):
+        os.makedirs(outputDir)
+        log.info(f'Make new output dir {outputDir}')
+
+    nxCfg2Acfg(outputDir, cfgDirPrefix)
+
+
+if __name__ == '__main__':
+    malwareNames = ['Bagle', 'Benign', 'Bifrose', 'Hupigon', 'Koobface',
+                    'Ldpinch', 'Lmir', 'Rbot', 'Sdbot', 'Swizzor',
+                    'Vundo', 'Zbot', 'Zlob']
+    log.info(f'{len(malwareNames)} types of CFGs:  + {malwareNames}')
+    iterAllDirectories()
