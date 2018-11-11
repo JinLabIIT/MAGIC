@@ -1,8 +1,9 @@
+#!/usr/bin/python2.7
+
+import re
+import glog as log
 import numpy as np
 from networkx import number_of_nodes
-from dp_utils import matchConstant
-from instructions import Instruction
-from cfg_builder import Block
 
 DataInst = ['dd', 'db', 'dw', 'dq', 'dt', 'extrn', 'unicode']
 DataInstDict = {k: v for v, k in enumerate(DataInst)}
@@ -91,7 +92,7 @@ load = [
 ]
 
 
-def classifyOperator(operator: str):
+def classifyOperator(operator):
     if operator in TransferInstDict:
         return Instruction.operandTypes['trans']
     elif operator in CallInstDict:
@@ -112,13 +113,78 @@ def classifyOperator(operator: str):
         return Instruction.operandTypes['other']
 
 
+class Instruction(object):
+    """Abstract assembly instruction, used as default for unknown ones"""
+    # Type of instruction, mapped to feature vector index.
+    operandTypes = {'trans': 0, 'call': 1, 'math': 2, 'cmp': 3,
+                    'crypto': 4, 'mov': 5, 'term': 6, 'def': 7,
+                    'other': 8}
+    # Type of const values in operator, mapped to feature vector index.
+    operatorTypes = {'num_const': len(operandTypes),
+                     'str_const': len(operandTypes) + 1}
+
+
+class Block(object):
+    """Block of control flow graph."""
+    instDim = len(Instruction.operandTypes) + len(Instruction.operatorTypes)
+    """Types of structual-related vertex features"""
+    vertexTypes = {'degree': instDim, 'num_inst': instDim + 1}
+
+    @staticmethod
+    def getAttributesDim():
+        return Block.instDim + len(Block.vertexTypes)
+
+
+def matchConstant(line):
+    """Parse the numeric/string constants in an operand"""
+    operand = line.strip('\n\r\t ')
+    numericCnts = 0
+    stringCnts = 0
+    """
+    Whole operand is a num OR leading num in expression.
+    E.g. "0ABh", "589h", "0ABh" in "0ABh*589h"
+    """
+    wholeNum = r'^([1-9][0-9A-F]*|0[A-F][0-9A-F]*)h?.*'
+    pattern = re.compile(wholeNum)
+    if pattern.match(operand):
+        numericCnts += 1
+        log.debug('[MatchConst] Match whole number in %s' % operand)
+        # numerics.append('%s:WHOLE/LEAD' % operand)
+    """Number inside expression, exclude the leading one."""
+    numInExpr = r'([+*/:]|-)([1-9][0-9A-F]*|0[A-F][0-9A-F]*)h?'
+    pattern = re.compile(numInExpr)
+    match = pattern.findall(operand)
+    if len(match) > 0:
+        numericCnts += 1
+        log.debug('[MatchConst] Match in-expression number in %s' % operand)
+        # numerics.append('%s:%d' % (operand, len(match)))
+    """Const string inside double/single quote"""
+    strRe = r'["\'][^"]+["\']'
+    pattern = re.compile(strRe)
+    match = pattern.findall(operand)
+    if len(match) > 0:
+        stringCnts += 1
+        log.debug('[MatchConst] Match str const in %s' % operand)
+        # strings.append('%s:%d' % (operand, len(match)))
+
+    return [numericCnts, stringCnts]
+
+
 def nodeFeatures(G):
     """
-    Extract features in each node: trying to be consist with CfgBuilder
+    Extract features in each node: need to be consist with cfg_builder
     """
     features = np.zeros((number_of_nodes(G), Block.getAttributesDim()))
+    numConstIdx = Instruction.operatorTypes['num_const']
+    strConstIdx = Instruction.operatorTypes['str_const']
+    degreeIdx = Block.vertexTypes['degree']
+    numInstIdx = Block.vertexTypes['num_inst']
+
     for (i, (node, attributes)) in enumerate(G.nodes(data=True)):
         instructions = attributes['Ins']
+        features[i, degreeIdx] = G.degree(node)
+        features[i, numInstIdx] = len(instructions)
+
         for (addr, inst) in instructions:
             if len(inst) == 0:
                 break
@@ -134,7 +200,7 @@ def nodeFeatures(G):
                 commentIdx = part.find(';')
                 operand = part if commentIdx == -1 else part[:commentIdx]
                 numericCnts, stringCnts = matchConstant(operand)
-                features[i, -2] += numericCnts
-                features[i, -1] += stringCnts
+                features[i, numConstIdx] += numericCnts
+                features[i, strConstIdx] += stringCnts
 
     return features

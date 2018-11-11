@@ -14,7 +14,8 @@ class Instruction(object):
                     'crypto': 4, 'mov': 5, 'term': 6, 'def': 7,
                     'other': 8}
     # Type of const values in operator, mapped to feature vector index.
-    operatorTypes = {'num_const': 9, 'str_cont': 10}
+    operatorTypes = {'num_const': len(operandTypes),
+                     'str_const': len(operandTypes) + 1}
 
     def __init__(self, addr: str,
                  operand: str = '',

@@ -15,6 +15,8 @@ class Block(object):
     """Block of control flow graph."""
     instDim = len(isn.Instruction.operandTypes) + \
         len(isn.Instruction.operatorTypes)
+    """Types of structual-related vertex features"""
+    vertexTypes = {'degree': instDim, 'num_inst': instDim + 1}
 
     def __init__(self) -> None:
         super(Block, self).__init__()
@@ -36,7 +38,7 @@ class Block(object):
 
     @staticmethod
     def getAttributesDim():
-        return Block.instDim + 2
+        return Block.instDim + len(Block.vertexTypes)
 
 
 class ControlFlowGraphBuilder(object):
