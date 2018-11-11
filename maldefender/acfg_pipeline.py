@@ -9,7 +9,8 @@ import cfg_builder
 import threading
 from argparse import ArgumentParser
 from typing import List, Dict
-from dp_utils import delCodeSegLog, list2Str, loadBinaryIds
+from dp_utils import delCodeSegLog, loadBinaryIds
+from python23_common list2str, neighborsFromAdjacentMatrix, matchConstant
 
 
 class AcfgWorker(threading.Thread):
@@ -113,17 +114,6 @@ class AcfgMaster(object):
 
         self.aggregateDgcnnFormat()
 
-    def neighborsFromAdjacentMatrix(self, spAdjacentMat) -> Dict[int, List[int]]:
-        spAdjacent = sp.sparse.find(spAdjacentMat)
-        indices = {}
-        for i in range(len(spAdjacent[0])):
-            if spAdjacent[0][i] not in indices:
-                indices[spAdjacent[0][i]] = []
-
-            indices[spAdjacent[0][i]].append(spAdjacent[1][i])
-
-        return indices
-
     def aggregateDgcnnFormat(self) -> None:
         log.debug(f"[AggrDgcnnFormat] Aggregate ACFGs to txt format")
         numBinaries = len(self.binaryIds)
@@ -153,10 +143,11 @@ class AcfgMaster(object):
                 continue
 
             output.write("%d %s %s\n" % (features.shape[0], label, bId))
-            indices = self.neighborsFromAdjacentMatrix(spAdjacentMat)
+            indices = neighborsFromAdjacentMatrix(spAdjacentMat)
             for (i, feature) in enumerate(features):
                 neighbors = indices[i] if i in indices else []
-                output.write("1 %d %s\n" % (len(neighbors), list2Str(neighbors, feature)))
+                nAndF = list2Str(neighbors, feature)
+                output.write("1 %d %s\n" % (len(neighbors), nAndF))
 
         output.close()
         emptyBidOutput.close()
@@ -180,8 +171,8 @@ class AcfgMaster(object):
 
 
 def processTrainSet():
-    pathPrefix = '../TrainSet'
-    labelPath = '../trainLabels.csv'
+    pathPrefix = '../../MsKaggle/TrainSet'
+    labelPath = '../../MsKaggle/trainLabels.csv'
     master = AcfgMaster(pathPrefix, labelPath, outputTxtName='MSACFG')
     start = time.process_time()
     master.dispatchWorkers(1)
@@ -190,7 +181,7 @@ def processTrainSet():
 
 
 def processTestSet():
-    pathPrefix = '../TestSet'
+    pathPrefix = '../../MsKaggle/TestSet'
     master = AcfgMaster(pathPrefix, labelPath=None, outputTxtName='MSACFG')
     start = time.process_time()
     master.dispatchWorkers(1)
@@ -200,7 +191,7 @@ def processTestSet():
 
 if __name__ == '__main__':
     log.setLevel("INFO")
-    cmdOpt = ArgumentParser(description='Multi-threading ACFG processing pipeline')
+    cmdOpt = ArgumentParser(description='Multithreading ACFG processing pipeline')
     cmdOpt.add_argument('-object', type=str, required=True,
                         help='Which dataset to process: {train, test}')
     cmdArgs, _ = cmdOpt.parse_known_args()

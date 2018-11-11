@@ -1,16 +1,9 @@
-
-# coding: utf-8
-
-# ### Convert All ACFGs
-
-# In[ ]:
-
-
+#!/usr/bin/python2.7
 from __future__ import absolute_import
 from __future__ import division
-from __future__ import print_function
 
 import os
+import glog as log
 import pickle as pkl
 import numpy as np
 import scipy as sp
@@ -29,7 +22,7 @@ if not os.path.exists(output_dir):
 
 with open(input_dir + 'graph_pathnames.csv', 'rb') as f:
     graph_pathnames = [line.strip() for line in f]
-    
+
 print(graph_pathnames[100:120])
 
 
@@ -61,24 +54,23 @@ test_cnt = 0
 for graph_pathname in graph_pathnames:
     label = label_names.index(graph_pathname.split('/')[1])
     graph_id = graph_pathname.split('/')[2][:-8] # ignore .gpickle
-    
+
     features = np.loadtxt(input_dir + graph_id + '.features.txt', dtype=int, ndmin=2)
     sp_adjacent_mat = sp.sparse.load_npz(input_dir + graph_id + '.adjacent.npz')
     output.write("%d %d\n" % (features.shape[0], label))
     test_cnt += 1
-    
+
     sp_adjacent = sp.sparse.find(sp_adjacent_mat)
     indices = {}
     for i in range(len(sp_adjacent[0])):
         if sp_adjacent[0][i] not in indices:
             indices[sp_adjacent[0][i]] = []
-            
+
         indices[sp_adjacent[0][i]].append(sp_adjacent[1][i])
-        
+
     for (i, feature) in enumerate(features):
         neighbors = indices[i] if i in indices else []
         output.write("1 %d %s\n" % (len(neighbors), list2str(neighbors, feature)))
 
 output.close()
 print("[Finished] Convert %d ACFGs to DGCNN txt format" % test_cnt)
-
