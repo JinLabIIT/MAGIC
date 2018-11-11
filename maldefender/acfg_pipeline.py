@@ -10,7 +10,8 @@ import threading
 from argparse import ArgumentParser
 from typing import List, Dict
 from dp_utils import delCodeSegLog, loadBinaryIds
-from python23_common list2str, neighborsFromAdjacentMatrix, matchConstant
+from python23_common import list2Str, neighborsFromAdjacentMatrix
+from python23_common import matchConstant
 
 
 class AcfgWorker(threading.Thread):

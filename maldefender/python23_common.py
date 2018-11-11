@@ -1,3 +1,8 @@
+import re
+import scipy as sp
+import glog as log
+
+
 def neighborsFromAdjacentMatrix(spAdjacentMat):
     spAdjacent = sp.sparse.find(spAdjacentMat)
     indices = {}

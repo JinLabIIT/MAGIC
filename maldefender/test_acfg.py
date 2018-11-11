@@ -315,8 +315,8 @@ class TestAcfgPipeline(unittest.TestCase):
 
     # @unittest.skip("Uncomment to run")
     def testIfSkipEmptyCfgs(self):
-        pathPrefix = '../TrainSet'
-        labelPath = '../trainLabels.csv'
+        pathPrefix = '../../MsKaggle/TrainSet'
+        labelPath = '../../MsKaggle/trainLabels.csv'
         binaryIds = [
             'da3XhOZzQEbKVtLgMYWv',
             'a9oIzfw03ED4lTBCt52Y',

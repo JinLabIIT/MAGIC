@@ -4,14 +4,14 @@ import glob
 import glog as log
 import os
 import numpy as np
-import scipy as sp
+
 import pandas as pd
 import networkx as nx
 from networkx import number_of_nodes, adjacency_matrix
 from yan_attributes import nodeFeatures
 from matplotlib import pyplot as plt
-from python23_common import matchConstant, list2Str,
-from python23_common import eighborsFromAdjacentMatrix
+from python23_common import list2Str
+from python23_common import neighborsFromAdjacentMatrix
 
 
 def plotHistgramInRange(data, left=1, right=200):
@@ -87,21 +87,20 @@ def acfg2DgcnnFormat(pklPaths, outputPrefix, outputTxtName='YANACFG'):
         G = nx.read_gpickle(pklPath)
         graphId = pklPath.split('/')[-1][:-8]  # ignore '.gpickle'
         malwareName = pklPath.split('/')[-2]
-        log.info("Processing %s CFGs" % malwareName)
+        label = malwareName2Label[malwareName]
+        log.info("Processing %s CFGs(label = %d)" % (malwareName, label))
 
-        label = malwareName2Label(malwareName)
         features = nodeFeatures(G)
         spAdjacentMat = adjacency_matrix(G, nodelist=G.nodes())
         output.write("%d %s %s\n" % (features.shape[0], label, graphId))
-
         indices = neighborsFromAdjacentMatrix(spAdjacentMat)
         for (i, feature) in enumerate(features):
             neighbors = indices[i] if i in indices else []
-            nPlusF = list2str(neighbors, feature)
+            nPlusF = list2Str(neighbors, feature)
             output.write("1 %d %s\n" % (len(neighbors), nPlusF))
 
     output.close()
-    log.info(f'%d ')
+    log.info('Finish processing %d gpickles' % len(pklPaths))
 
 
 def iterAllDirectories(cfgDirPrefix='../../IdaProCfg/AllCfg',

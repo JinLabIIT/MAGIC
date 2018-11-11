@@ -4,6 +4,8 @@ import re
 import glog as log
 import numpy as np
 from networkx import number_of_nodes
+from python23_common import matchConstant
+
 
 DataInst = ['dd', 'db', 'dw', 'dq', 'dt', 'extrn', 'unicode']
 DataInstDict = {k: v for v, k in enumerate(DataInst)}
@@ -133,41 +135,6 @@ class Block(object):
     @staticmethod
     def getAttributesDim():
         return Block.instDim + len(Block.vertexTypes)
-
-
-def matchConstant(line):
-    """Parse the numeric/string constants in an operand"""
-    operand = line.strip('\n\r\t ')
-    numericCnts = 0
-    stringCnts = 0
-    """
-    Whole operand is a num OR leading num in expression.
-    E.g. "0ABh", "589h", "0ABh" in "0ABh*589h"
-    """
-    wholeNum = r'^([1-9][0-9A-F]*|0[A-F][0-9A-F]*)h?.*'
-    pattern = re.compile(wholeNum)
-    if pattern.match(operand):
-        numericCnts += 1
-        log.debug('[MatchConst] Match whole number in %s' % operand)
-        # numerics.append('%s:WHOLE/LEAD' % operand)
-    """Number inside expression, exclude the leading one."""
-    numInExpr = r'([+*/:]|-)([1-9][0-9A-F]*|0[A-F][0-9A-F]*)h?'
-    pattern = re.compile(numInExpr)
-    match = pattern.findall(operand)
-    if len(match) > 0:
-        numericCnts += 1
-        log.debug('[MatchConst] Match in-expression number in %s' % operand)
-        # numerics.append('%s:%d' % (operand, len(match)))
-    """Const string inside double/single quote"""
-    strRe = r'["\'][^"]+["\']'
-    pattern = re.compile(strRe)
-    match = pattern.findall(operand)
-    if len(match) > 0:
-        stringCnts += 1
-        log.debug('[MatchConst] Match str const in %s' % operand)
-        # strings.append('%s:%d' % (operand, len(match)))
-
-    return [numericCnts, stringCnts]
 
 
 def nodeFeatures(G):
