@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import torch.optim as optim
 from typing import Dict, List
-from ml_utils import cmd_args, gHP, kFoldSplit
+from ml_utils import cmd_args, gHP, kFoldSplit, S2VGraph
 from ml_utils import computePrScores, loadGraphsMayCache
 from ml_utils import storeConfusionMatrix, normalizeFeatures
 from e2e_model import Classifier, loopDataset, predictDataset
@@ -18,7 +18,7 @@ from hyperparameters import parseHpTuning, HyperParameterIterator
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 
-def exportRandomPredictions(graphs):
+def exportRandomPredictions(graphs: List[S2VGraph]):
     output = open(cmd_args.test_dir + '/randomSubmission.csv', 'w')
     output.write('"Id","Prediction1","Prediction2","Prediction3","Prediction4","Prediction5","Prediction6","Prediction7","Prediction8","Prediction9"\n')
     guessProb = ["%.8f" % (1.0 / 9) for _ in range(9)]
@@ -47,7 +47,7 @@ def exportRandomPredictions(graphs):
     output.close()
 
 
-def exportPredictions(graphs, predProb, epoch=None):
+def exportPredictions(graphs: List[S2VGraph], predProb, epoch: int = None):
     log.debug(f'Export {len(predProb)} predictions for {len(graphs)} graphs')
     assert len(graphs) == len(predProb)
     if epoch is None:
@@ -85,7 +85,20 @@ def exportPredictions(graphs, predProb, epoch=None):
     output.close()
 
 
-def trainThenPredict(trainSet, testGraphs, numEpochs) -> Dict[str, float]:
+def testWithModel(classifier, testGraphs: List[S2VGraph]) -> None:
+    if testGraphs is None:
+        return
+
+    classifier.eval()
+    startTime = time.process_time()
+    testPredProb = predictDataset(testGraphs, classifier)
+    log.info(f'Net testing time = {time.process_time() - startTime} seconds')
+    exportPredictions(testGraphs, testPredProb)
+
+
+def trainThenPredict(trainSet: List[S2VGraph],
+                     testGraphs: List[S2VGraph],
+                     numEpochs: int) -> Dict[str, float]:
     classifier = Classifier()
     log.info(f'Global hyperparameter setting: {gHP}')
     if cmd_args.mode == 'gpu':
@@ -138,9 +151,7 @@ def trainThenPredict(trainSet, testGraphs, numEpochs) -> Dict[str, float]:
         validF1Hist.append(prScore['weightedF1'])
 
         if e % 10 == 0:
-            classifier.eval()
-            testPredProb = predictDataset(testGraphs, classifier)
-            exportPredictions(testGraphs, testPredProb, e)
+            testWithModel(classifier, testGraphs)
 
     log.info(f'Net training time = {time.process_time() - startTime} seconds')
     storeConfusionMatrix(trainPred, trainLabels, 'train')
@@ -163,15 +174,10 @@ def trainThenPredict(trainSet, testGraphs, numEpochs) -> Dict[str, float]:
     histFile.write("# %s\n" % str(gHP))
     df.to_csv(histFile, index_label='Epoch', float_format='%.6f')
     histFile.close()
-
-    classifier.eval()
-    startTime = time.process_time()
-    testPredProb = predictDataset(testGraphs, classifier)
-    log.info(f'Net testing time = {time.process_time() - startTime} seconds')
-    exportPredictions(testGraphs, testPredProb)
+    testWithModel(classifier, testGraphs)
 
 
-def decideHyperparameters(graphs) -> int:
+def decideHyperparameters(graphs: List[S2VGraph]) -> int:
     if cmd_args.hp_path == 'none':
         log.info(f'Using previous CV results to decide hyperparameters')
         optHp = parseHpTuning(cmd_args.data)
@@ -197,18 +203,23 @@ def decideHyperparameters(graphs) -> int:
         gHP['poolingK'] = numNodesList[idx]
         return gHP['numEpochs']
 
+
 if __name__ == '__main__':
     log.setLevel("INFO")
     random.seed(cmd_args.seed)
     np.random.seed(cmd_args.seed)
     torch.manual_seed(cmd_args.seed)
 
-    startTime = time.process_time()
-    testGraphs = loadGraphsMayCache(cmd_args.test_dir, True)
-    normalizeFeatures(testGraphs, useCachedTest=cmd_args.use_cached_norm,
-                      operation='zero_mean')
-    dataReadyTime = time.process_time() - startTime
-    log.info('Testset ready takes %.2fs' % dataReadyTime)
+    if cmd_args.data == 'YANACFG':
+        log.warning(f'No testset for YANACFG data')
+        testGraphs = None
+    else:
+        startTime = time.process_time()
+        testGraphs = loadGraphsMayCache(cmd_args.test_dir, True)
+        normalizeFeatures(testGraphs, useCachedTest=cmd_args.use_cached_norm,
+                          operation='zero_mean')
+        dataReadyTime = time.process_time() - startTime
+        log.info('Testset ready takes %.2fs' % dataReadyTime)
 
     startTime = time.process_time()
     trainGraphs = loadGraphsMayCache(cmd_args.train_dir, False)

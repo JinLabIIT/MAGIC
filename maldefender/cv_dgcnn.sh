@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DATA=${1-MSACFG}
+DATA="${1-MSACFG}"
 GPU="${2-1}"  # select the GPU number, 0-3
 HP_PATH="${3-train_once.hp}"
 

@@ -17,7 +17,7 @@ from hyperparameters import HyperParameterIterator, parseHpTuning
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 
-def trainThenValid(trainGraphs, validGraphs):
+def trainThenValid(trainGraphs: List[S2VGraph], validGraphs: List[S2VGraph]):
     classifier = Classifier()
     log.info(f"Hyperparameter setting: {gHP}")
 
