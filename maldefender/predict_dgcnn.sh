@@ -7,9 +7,9 @@ HP_PATH="${3-none}"
 # general/default settings
 gpu_or_cpu=gpu
 cache_path=cached_${DATA,,}_graphs
-train_dir=../TrainSet
-test_dir=../TestSet
-use_cached_data=True
+train_dir=../../${DATA}/TrainSet
+test_dir=../../${DATA}/TrainSet
+use_cached_data=False
 
 CUDA_VISIBLE_DEVICES=${GPU} python3.7 tuned_model.py        \
   -seed 1                                                   \

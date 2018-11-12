@@ -11,11 +11,11 @@ from hyperparameters import HyperParameterIterator
 class TestCfgBuildedr(unittest.TestCase):
     def setUp(self):
         super(TestCfgBuildedr, self).setUp()
-        # self.skipTest('Uncomment me to run this test case')
+        # self.skipTest('Uncomment me to skip this test case')
 
     @unittest.skip("Uncomment to run")
     def testParseInstructions(self):
-        pathPrefix = '../../MsKaggle/TrainSet'
+        pathPrefix = '../../MSACFG/TrainSet'
         binaryIds = [
             '0A32eTdBKayjCWhZqDOQ',
             'exGy3iaKJmRprdHcB0NO',
@@ -90,7 +90,7 @@ class TestCfgBuildedr(unittest.TestCase):
 
     @unittest.skip("Uncomment to run")
     def testBuildControlFlowGraphBatch(self):
-        pathPrefix = '../../MsKaggle/TrainSet'
+        pathPrefix = '../../MSACFG/TrainSet'
         binaryIds = [
             # '0A32eTdBKayjCWhZqDOQ',
             'exGy3iaKJmRprdHcB0NO',
@@ -113,7 +113,7 @@ class TestCfgBuildedr(unittest.TestCase):
 
     @unittest.skip("Uncomment to run")
     def testEmptyCodeSeg(self):
-        pathPrefix = '../../MsKaggle/TrainSet'
+        pathPrefix = '../../MSACFG/TrainSet'
         binaryIds = [
             # Empty ones in trainset: BinaryId => label
             'da3XhOZzQEbKVtLgMYWv',  # => 1
@@ -199,11 +199,11 @@ class TestCfgBuildedr(unittest.TestCase):
 class TestAcfgPipeline(unittest.TestCase):
     def setUp(self):
         super(TestAcfgPipeline, self).setUp()
-        # self.skipTest('Uncomment me to run this test case')
+        # self.skipTest('Uncomment me to skip this test case')
 
     @unittest.skip("Takes about 1 day to finish")
     def testDiscoverInstDict(self):
-        pathPrefix = '../../MsKaggle/TestSet'
+        pathPrefix = '../../MSACFG/TestSet'
         binaryIds = loadBinaryIds(pathPrefix, None)
         worker = AcfgWorker(pathPrefix, binaryIds)
         worker.discoverInstDictionary('TestSetInstDictionary')
@@ -216,7 +216,7 @@ class TestAcfgPipeline(unittest.TestCase):
 
     @unittest.skip("Uncomment to run")
     def testWorkerRun(self):
-        pathPrefix = '../../MsKaggle/TrainSet'
+        pathPrefix = '../../MSACFG/TrainSet'
         binaryIds1 = [
             'exGy3iaKJmRprdHcB0NO',
             '0Q4ALVSRnlHUBjyOb1sw',
@@ -279,8 +279,8 @@ class TestAcfgPipeline(unittest.TestCase):
 
     # @unittest.skip("Uncomment to run")
     def testMasterDispatch(self):
-        pathPrefix = '../../MsKaggle/TrainSet'
-        labelPath = '../../MsKaggle/trainLabels.csv'
+        pathPrefix = '../../MSACFG/TrainSet'
+        labelPath = '../../MSACFG/trainLabels.csv'
         binaryIds = [
             'cqdUoQDaZfGkt5ilBe7n',
             'jgOs7KiB0aTEzvSUJVPp',
@@ -301,7 +301,7 @@ class TestAcfgPipeline(unittest.TestCase):
             self.assertEqual(master.bId2Label[bId], labels[i], 'Wrong label')
 
     def testMasterTestSet(self):
-        pathPrefix = '../../MsKaggle/TestSet'
+        pathPrefix = '../../MSACFG/TestSet'
         labelPath = None
         binaryIds = [
             'mkJhUOLaM2BnXG3S4cb5',
@@ -315,8 +315,8 @@ class TestAcfgPipeline(unittest.TestCase):
 
     # @unittest.skip("Uncomment to run")
     def testIfSkipEmptyCfgs(self):
-        pathPrefix = '../../MsKaggle/TrainSet'
-        labelPath = '../../MsKaggle/trainLabels.csv'
+        pathPrefix = '../../MSACFG/TrainSet'
+        labelPath = '../../MSACFG/trainLabels.csv'
         binaryIds = [
             'da3XhOZzQEbKVtLgMYWv',
             'a9oIzfw03ED4lTBCt52Y',
@@ -338,8 +338,8 @@ class TestAcfgPipeline(unittest.TestCase):
 
     # @unittest.skip("Uncomment to run")
     def testValidAddrFormat(self):
-        pathPrefix = '../../MsKaggle/TrainSet'
-        labelPath = '../../MsKaggle/trainLabels.csv'
+        pathPrefix = '../../MSACFG/TrainSet'
+        labelPath = '../../MSACFG/trainLabels.csv'
         binaryIds = [
             '1x2u5Ws7tzFRAgyqoJBV',
         ]
@@ -354,8 +354,8 @@ class TestAcfgRunningTime(unittest.TestCase):
         self.skipTest('Measuring running time may takes hours or days. Don\'t run me unless you are sure')
 
     def testRunningTime(self):
-        pathPrefix = '../../MsKaggle/TrainSet'
-        labelPath = '../../MsKaggle/trainLabels.csv'
+        pathPrefix = '../../MSACFG/TrainSet'
+        labelPath = '../../MSACFG/trainLabels.csv'
 
         master1 = AcfgMaster(pathPrefix, labelPath, 'TestRunningTime1')
         start = time.process_time()

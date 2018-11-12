@@ -8,9 +8,9 @@ gpu_or_cpu=gpu
 cache_path=cached_${DATA,,}_graphs
 # hp_path=full_gpu${GPU}.hp
 hp_path=train_once.hp
-train_dir=../TrainSet
-test_dir=../TestSet
-use_cached_data=True
+train_dir=../../${DATA}/TrainSet
+test_dir=../../${DATA}/TestSet
+use_cached_data=False
 
 CUDA_VISIBLE_DEVICES=${GPU} python3.7 cross_valid.py        \
   -seed 1                                                   \

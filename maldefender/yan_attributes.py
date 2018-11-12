@@ -158,13 +158,15 @@ def nodeFeatures(G):
 
         for (addr, inst) in instructions:
             if len(inst) == 0:
-                break
+                log.debug('Empty inst \'%s\' in %s' % (inst, node))
+                continue
             """
             Format of assembly code: "operator operand, operand, ..., operand"
             """
             operatorClass = classifyOperator(inst[0])
             features[i, operatorClass] += 1
             if len(inst) == 1:
+                log.debug('Inst \'%s\' has no operator' % inst)
                 continue
 
             for part in inst[1].split(','):

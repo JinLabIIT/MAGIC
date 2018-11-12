@@ -1,10 +1,8 @@
 #!/usr/bin/python2.7
-
 import glob
 import glog as log
 import os
 import numpy as np
-
 import pandas as pd
 import networkx as nx
 from networkx import number_of_nodes, adjacency_matrix
@@ -60,15 +58,14 @@ def nxCfg2Acfg(outputDir, malwareDirPrefix):
             log.warning('%s not in known malware types' % malwareName)
             continue
 
-        log.info("Processing %s CFGs" % malwareName)
+        log.info("Search %s gpickles in %s" % (malwareName, malwareDirname))
         pklPaths = glob.glob(malwareDirname + '/*')
-
         if len(pklPaths) == 0:
-            log.warning('%s is empty' % pklPaths)
+            log.warning('Pickle path %s is empty' % pklPaths)
 
-        for pklPath in pklPaths[:4]:
+        for pklPath in pklPaths:
             if pklPath[-8:] != '.gpickle':
-                log.warning('%s is not gpickle file' % pklPath)
+                log.warning('Ignore %s since it\'s not gpickle file' % pklPath)
                 continue
 
             log.debug('Loading nx.Graph from %s' % pklPath)
@@ -95,7 +92,7 @@ def acfg2DgcnnFormat(pklPaths, outputPrefix, outputTxtName='YANACFG'):
         graphId = pklPath.split('/')[-1][:-8]  # ignore '.gpickle'
         malwareName = pklPath.split('/')[-2]
         label = malwareName2Label[malwareName]
-        log.info("Processing %s CFGs(label = %d)" % (malwareName, label))
+        log.info("Process %s as %s(label=%d)" % (pklPath, malwareName, label))
 
         features, orderedNodes = nodeFeatures(G)
         spAdjacentMat = adjacency_matrix(G, nodelist=orderedNodes)
@@ -110,8 +107,7 @@ def acfg2DgcnnFormat(pklPaths, outputPrefix, outputTxtName='YANACFG'):
     log.info('Finish processing %d gpickles' % len(pklPaths))
 
 
-def iterAllDirectories(cfgDirPrefix='../../IdaProCfg/AllCfg',
-                       outputDir='../../IdaProCfg/AllAcfg'):
+def iterAllDirectories(cfgDirPrefix, outputDir):
     if not os.path.exists(outputDir):
         os.makedirs(outputDir)
         log.info('Make new output dir: %s' % outputDir)
@@ -122,4 +118,6 @@ def iterAllDirectories(cfgDirPrefix='../../IdaProCfg/AllCfg',
 
 if __name__ == '__main__':
     log.setLevel("INFO")
-    iterAllDirectories()
+    cfgDirPrefix='../../YANACFG/AllCfg'
+    outputDir='../../YANACFG/AllAcfg'
+    iterAllDirectories(cfgDirPrefix, outputDir)
