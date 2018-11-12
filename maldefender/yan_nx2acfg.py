@@ -14,6 +14,13 @@ from python23_common import list2Str
 from python23_common import neighborsFromAdjacentMatrix
 
 
+malwareNames = ['Bagle', 'Benign', 'Bifrose', 'Hupigon', 'Koobface',
+                'Ldpinch', 'Lmir', 'Rbot', 'Sdbot', 'Swizzor',
+                'Vundo', 'Zbot', 'Zlob']
+malwareName2Label = {k: v for (v, k) in enumerate(malwareNames)}
+log.info('%s types of CFGs:  %s' % (len(malwareNames), malwareNames))
+
+
 def plotHistgramInRange(data, left=1, right=200):
     for column in data:
         df = data[column].dropna()
@@ -90,8 +97,8 @@ def acfg2DgcnnFormat(pklPaths, outputPrefix, outputTxtName='YANACFG'):
         label = malwareName2Label[malwareName]
         log.info("Processing %s CFGs(label = %d)" % (malwareName, label))
 
-        features = nodeFeatures(G)
-        spAdjacentMat = adjacency_matrix(G, nodelist=G.nodes())
+        features, orderedNodes = nodeFeatures(G)
+        spAdjacentMat = adjacency_matrix(G, nodelist=orderedNodes)
         output.write("%d %s %s\n" % (features.shape[0], label, graphId))
         indices = neighborsFromAdjacentMatrix(spAdjacentMat)
         for (i, feature) in enumerate(features):
@@ -107,16 +114,12 @@ def iterAllDirectories(cfgDirPrefix='../../IdaProCfg/AllCfg',
                        outputDir='../../IdaProCfg/AllAcfg'):
     if not os.path.exists(outputDir):
         os.makedirs(outputDir)
-        log.info('Make new output dir: ' % outputDir)
+        log.info('Make new output dir: %s' % outputDir)
 
     pklPaths = nxCfg2Acfg(outputDir, cfgDirPrefix)
     acfg2DgcnnFormat(pklPaths, outputDir + '/YANACFG')
 
 
 if __name__ == '__main__':
-    malwareNames = ['Bagle', 'Benign', 'Bifrose', 'Hupigon', 'Koobface',
-                    'Ldpinch', 'Lmir', 'Rbot', 'Sdbot', 'Swizzor',
-                    'Vundo', 'Zbot', 'Zlob']
-    malwareName2Label = {k: v for (v, k) in enumerate(malwareNames)}
-    log.info('%s types of CFGs:  %s' % (len(malwareNames), malwareNames))
+    log.setLevel("INFO")
     iterAllDirectories()

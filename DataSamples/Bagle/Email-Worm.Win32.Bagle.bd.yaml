@@ -1,0 +1,127 @@
+!!python/object:networkx.classes.multidigraph.MultiDiGraph
+adj: &id001
+  Root: {}
+  sub_409314(4231956):
+    sub_409314(4231974): &id003
+      0: {root: sub_409314(4231956)}
+  sub_409314(4231974):
+    sub_409314(4231979): &id004
+      0: {root: sub_409314(4231974)}
+  sub_409314(4231979): {}
+  sub_40932D(4231974): {}
+  sub_40932D(4231981):
+    sub_40932D(4231986): &id006
+      0: {root: sub_40932D(4231981)}
+  sub_40932D(4231986):
+    sub_40932D(4231974): &id005
+      0: {root: sub_40932D(4231986)}
+adjlist_dict_factory: &id002 !!python/name:builtins.dict ''
+edge: *id001
+edge_attr_dict_factory: *id002
+edge_key_dict_factory: *id002
+graph: {}
+node:
+  Root:
+    End: 0
+    Ins: []
+    Next: [sub_409314(4231956), sub_40932D(4231981)]
+    Prev: []
+    Start: 0
+  sub_409314(4231956):
+    End: 4231974
+    Ins:
+    - !!python/tuple
+      - 4231956
+      - [pop, ecx]
+    - !!python/tuple
+      - 4231957
+      - [push, edx]
+    - !!python/tuple
+      - 4231958
+      - [push, ebp]
+    - !!python/tuple
+      - 4231959
+      - [lea, 'eax,word_40236E[ebp]']
+    - !!python/tuple
+      - 4231965
+      - [push, eax]
+    - !!python/tuple
+      - 4231966
+      - [sub, 'eax,eax']
+    - !!python/tuple
+      - 4231968
+      - [push, 'dwordptrfs:[eax]']
+    - !!python/tuple
+      - 4231971
+      - [mov, 'fs:[eax],esp']
+    Next: [4231974]
+    Prev: []
+    Start: 4231956
+  sub_409314(4231974):
+    End: 4231976
+    Ins:
+    - !!python/tuple
+      - 4231974
+      - [jmp, shortloc_40932B]
+    Next: [4231979]
+    Prev: []
+    Start: 4231974
+  sub_409314(4231979):
+    End: 4231981
+    Ins:
+    - !!python/tuple
+      - 4231979
+      - [push, ecx]
+    - !!python/tuple
+      - 4231980
+      - [retn]
+    Next: []
+    Prev: []
+    Start: 4231979
+  sub_40932D(4231974):
+    End: 4231974
+    Ins:
+    - !!python/tuple
+      - 4231974
+      - [jmp, shortloc_40932B]
+    Next: []
+    Prev: []
+    Start: 4231974
+  sub_40932D(4231981):
+    End: 4231983
+    Ins:
+    - !!python/tuple
+      - 4231981
+      - [jmp, shortloc_409332]
+    Next: [4231986]
+    Prev: []
+    Start: 4231981
+  sub_40932D(4231986):
+    End: 4231990
+    Ins:
+    - !!python/tuple
+      - 4231986
+      - [pop, ecx]
+    - !!python/tuple
+      - 4231987
+      - [inc, ecx]
+    - !!python/tuple
+      - 4231988
+      - [jmp, shortloc_409326]
+    Next: [4231974]
+    Prev: []
+    Start: 4231986
+node_dict_factory: *id002
+pred:
+  Root: {}
+  sub_409314(4231956): {}
+  sub_409314(4231974):
+    sub_409314(4231956): *id003
+  sub_409314(4231979):
+    sub_409314(4231974): *id004
+  sub_40932D(4231974):
+    sub_40932D(4231986): *id005
+  sub_40932D(4231981): {}
+  sub_40932D(4231986):
+    sub_40932D(4231981): *id006
+succ: *id001

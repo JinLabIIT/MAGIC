@@ -146,11 +146,15 @@ def nodeFeatures(G):
     strConstIdx = Instruction.operatorTypes['str_const']
     degreeIdx = Block.vertexTypes['degree']
     numInstIdx = Block.vertexTypes['num_inst']
-
-    for (i, (node, attributes)) in enumerate(G.nodes(data=True)):
+    orderedNodes = []
+    for (i, (node, attributes)) in enumerate(sorted(G.nodes(data=True))):
+        orderedNodes.append(node)
         instructions = attributes['Ins']
         features[i, degreeIdx] = G.degree(node)
         features[i, numInstIdx] = len(instructions)
+        log.debug('%s\'s instructions: %s' % (node, instructions))
+        log.debug('%s\'s degree = %s' % (node, G.degree(node)))
+        log.debug('%s\'s attributes = %s\n' % (node, attributes))
 
         for (addr, inst) in instructions:
             if len(inst) == 0:
@@ -170,4 +174,4 @@ def nodeFeatures(G):
                 features[i, numConstIdx] += numericCnts
                 features[i, strConstIdx] += stringCnts
 
-    return features
+    return features, orderedNodes
