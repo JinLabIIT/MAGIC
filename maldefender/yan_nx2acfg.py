@@ -15,7 +15,8 @@ from python23_common import neighborsFromAdjacentMatrix
 malwareNames = ['Bagle', 'Benign', 'Bifrose', 'Hupigon', 'Koobface',
                 'Ldpinch', 'Lmir', 'Rbot', 'Sdbot', 'Swizzor',
                 'Vundo', 'Zbot', 'Zlob']
-malwareName2Label = {k: v for (v, k) in enumerate(malwareNames)}
+# Map malware names to 1-based integer label
+malwareName2Label = {k: v + 1 for (v, k) in enumerate(malwareNames)}
 log.info('%s types of CFGs:  %s' % (len(malwareNames), malwareNames))
 
 
@@ -119,5 +120,5 @@ def iterAllDirectories(cfgDirPrefix, outputDir):
 if __name__ == '__main__':
     log.setLevel("INFO")
     cfgDirPrefix='../../YANACFG/AllCfg'
-    outputDir='../../YANACFG/AllAcfg'
+    outputDir='../../YANACFG/TrainSet'
     iterAllDirectories(cfgDirPrefix, outputDir)

@@ -172,8 +172,8 @@ class AcfgMaster(object):
 
 
 def processTrainSet():
-    pathPrefix = '../../MsKaggle/TrainSet'
-    labelPath = '../../MsKaggle/trainLabels.csv'
+    pathPrefix = '../../MSACFG/TrainSet'
+    labelPath = '../../MSACFG/trainLabels.csv'
     master = AcfgMaster(pathPrefix, labelPath, outputTxtName='MSACFG')
     start = time.process_time()
     master.dispatchWorkers(1)
@@ -182,7 +182,8 @@ def processTrainSet():
 
 
 def processTestSet():
-    pathPrefix = '../../MsKaggle/TestSet'
+    """Save output to test dir as MSACFG.txt"""
+    pathPrefix = '../../MSACFG/TestSet'
     master = AcfgMaster(pathPrefix, labelPath=None, outputTxtName='MSACFG')
     start = time.process_time()
     master.dispatchWorkers(1)
