@@ -12,7 +12,7 @@ import pandas as pd
 import glog as log
 import networkx as nx
 import pickle as pkl
-from typing import List, Dict, Set
+from typing import List, Dict, Set, Tuple
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import precision_score, recall_score, f1_score
 
@@ -33,14 +33,19 @@ cmd_opt.add_argument('-seed', type=int, default=1, help='seed')
 cmd_opt.add_argument('-mlp_type', type=str, default='vanilla',
                      help='Type of regression MLP: vanilla|rap|vgg')
 cmd_opt.add_argument('-use_cached_data', type=str, default='False',
-                     help='whether to use previously cached dataset')
-cmd_opt.add_argument('-cache_path', type=str, default='cached_graphs.pkl',
-                     help='which cached data to use')
+                     help='if use previously cached dataset')
+cmd_opt.add_argument('-cache_path', type=str, default='cached_graphs',
+                     help='which cached data to use or write new data to')
+cmd_opt.add_argument('-use_cached_norm', type=str, default='False',
+                     help='if use previously calculated min/max/avg/std for feature scaling')
+cmd_opt.add_argument('-norm_path', type=str, default='norm',
+                     help='which cached data to use or write new data to')
 cmd_opt.add_argument('-hp_path', type=str, default='none',
                      help='raw hyperparameter values')
 gHP = dict()
 cmd_args, _ = cmd_opt.parse_known_args()
 cmd_args.use_cached_data = (cmd_args.use_cached_data == "True")
+cmd_args.use_cached_norm = (cmd_args.use_cached_norm == "True")
 log.info("Parsed cmdline arguments: %s" % cmd_args)
 testBinaryIds = {
     'cqdUoQDaZfGkt5ilBe7n': 0,
@@ -81,7 +86,7 @@ class S2VGraph(object):
         else:
             self.num_edges = 0
             self.edge_pairs = np.array([])
-            log.warning(f'ACFG-{binaryId} has no edge')
+            log.warning(f'{binaryId} has no edge')
             log.debug(f'{binaryId} #nodes: {self.num_nodes}, label: {label}')
 
 
@@ -197,52 +202,21 @@ def kFoldSplit(k: int, graphs: List[S2VGraph]) -> List[List[S2VGraph]]:
     return results
 
 
-def normalizeFeatures(graphs: List[S2VGraph],
-                      useCachedTrain: bool = False,
-                      useCachedTest: bool = False,
-                      operation: str = 'min_max') -> List[List[float]]:
-    if useCachedTrain:
-        log.debug(f'Using previous calculated train min/max vector')
-        maxVector = [
-            2.0, 1367.0, 5411.0, 525.0, 0.0, 4245.0, 1.0, 2516938.0, 8875.0,
-            2489922.0, 7916.0, 25527.0, 2516954.0
-        ]
-        minVector = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
-        avgVector = [0.5962032061725268, 0.4180271544042307,
-                     1.6158560684958867, 0.24502194444083092,
-                     0.0, 2.175661078432198, 0.13442428699219405,
-                     63.45916465925378, 2.262125637901996,
-                     78.41444585456485, 0.018334971530191924,
-                     1.9924283931335767, 70.89752509521182]
-        stdVector = [0.49097240095840666, 1.3898312633734076,
-                     27.59374888091898, 0.514249527342708,
-                     0.000000000000001, 17.252417053163388,
-                     0.3411076048066078, 8141.555766865466,
-                     15.87218165891597, 7755.615488089883,
-                     2.9998780886433027, 28.02481653517624,
-                     8141.84431147715]
-    elif useCachedTest:
-        log.debug(f'Using previous calculated test min/max vector')
-        maxVector = [
-            2.0, 1883.0, 6999.0, 1036.0, 0.0, 4122.0, 1.0, 2514158.0, 5407.0,
-            2486757.0, 4728.0, 25527.0, 2514174.0
-        ]
-        minVector = [
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0
-        ]
-        avgVector = [0.5970183273238024, 0.414436492695235,
-                     1.6023817480537264, 0.24687678246451827,
-                     0.0, 2.1342394812947156, 0.1330682587555883,
-                     69.69281705685793, 2.258427280249422,
-                     83.6536707518127, 0.018659769558083145,
-                     1.987237055993612, 77.07021552681057]
-        stdVector = [0.4908864860606825, 1.5937404761957945,
-                     27.58260356845197, 0.6617551383910477,
-                     0.000000000000001, 17.397127884916774,
-                     0.33964849069835007, 8474.05518627391,
-                     15.633733132574285, 7959.109393152846,
-                     2.8443524115866694, 24.230326277528274,
-                     8474.337473921465]
+def loadNormVectors(graphs, useCachedTrain: bool = False,
+                    useCachedTest: bool = False) -> Tuple[List[float]]:
+    cachePath = cmd_args.norm_path
+    if useCachedTest == True:
+        cachePath += '_test'
+
+    if useCachedTrain or useCachedTest:
+        log.info(f'Loading previous min/max/avg/std vectors from {cachePath}')
+        cacheFile = open(cachePath + '.pkl', 'rb')
+        norm = pkl.load(cacheFile)
+        maxVector = norm['maxVector']
+        minVector = norm['minVector']
+        avgVector = norm['avgVector']
+        stdVector = norm['stdVector']
+        cacheFile.close()
     else:
         nodeFeatures = None
         for g in graphs:
@@ -257,14 +231,34 @@ def normalizeFeatures(graphs: List[S2VGraph],
         minVector = np.amin(nodeFeatures, axis=0)
         avgVector = np.mean(nodeFeatures, axis=0)
         stdVector = np.std(nodeFeatures, axis=0)
+        log.info(f'Dumping calculated min/max/avg/std vectors to {cachePath}')
+        cacheFile = open(cachePath, 'wb')
+        norm = {'minVector': minVector, 'maxVector': maxVector,
+                'avgVector': avgVector, 'stdVector': stdVector}
+        pkl.dump(norm, cacheFile)
+        cacheFile.close()
 
+    return (maxVector, minVector, avgVector, stdVector)
+
+
+def normalizeFeatures(graphs: List[S2VGraph],
+                      useCachedTrain: bool = False,
+                      useCachedTest: bool = False,
+                      operation: str = 'min_max') -> List[List[float]]:
+    normVectors = loadNormVectors(graphs, useCachedTrain, useCachedTest)
+    maxVector, minVector, avgVector, stdVector = normVectors
     log.info(f'Max feature vector: {list(maxVector)}')
     log.info(f'Min feature vector: {list(minVector)}')
     log.info(f'Avg feature vector: {list(avgVector)}')
     log.info(f'Std feature vector: {list(stdVector)}')
-
     diff = [x - y for (x, y) in zip(maxVector, minVector)]
-    diffVector = [x if x > 0 else 1 for x in diff]
+    diffVector = [1 if math.isclose(x, 0.0) else x for x in diff]
+    stdVector = [1 if math.isclose(x, 0.0) else x for x in stdVector]
+    reduceDims = []
+    for (i, pair) in enumerate(zip(maxVector, minVector)):
+        if math.isclose(pair[0], pair[1]):
+            reduceDims.append(i)
+
     for g in graphs:
         if operation == 'min_max':
             g.node_features = (g.node_features - minVector) / diffVector
@@ -273,10 +267,11 @@ def normalizeFeatures(graphs: List[S2VGraph],
         else:
             log.debug(f'Unknown operation: {operation}')
 
-        # delete column with only zeros
-        g.node_features = np.delete(g.node_features, 4, 1)
+        for i in reduceDims:
+            g.node_features = np.delete(g.node_features, i, axis=1)
 
-    gHP['featureDim'] -= 1
+    log.info(f'Delete constant features: {reduceDims}')
+    gHP['featureDim'] -= len(reduceDims)
     return [maxVector, minVector, avgVector, stdVector]
 
 
