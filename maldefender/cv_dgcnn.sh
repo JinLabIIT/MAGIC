@@ -2,15 +2,14 @@
 
 DATA="${1-MSACFG}"
 GPU="${2-1}"  # select the GPU number, 0-3
-HP_PATH="${3-train_once.hp}"
+HP_PATH="${3-train_once.hp}" # full_gpu${GPU}.hp
 
 # general/default settings
 gpu_or_cpu=gpu
 train_dir=../../${DATA}/TrainSet
-use_cached_data=False
+use_cached_data=True
 cache_path=cached_${DATA,,}_graphs
-# HP_PATH=full_gpu${GPU}.hp
-use_cached_norm=False
+use_cached_norm=True
 norm_path=norm_${DATA,,}
 
 CUDA_VISIBLE_DEVICES=${GPU} python3.7 cross_valid.py        \

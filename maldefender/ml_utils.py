@@ -232,7 +232,7 @@ def loadNormVectors(graphs, useCachedTrain: bool = False,
         avgVector = np.mean(nodeFeatures, axis=0)
         stdVector = np.std(nodeFeatures, axis=0)
         log.info(f'Dumping calculated min/max/avg/std vectors to {cachePath}')
-        cacheFile = open(cachePath, 'wb')
+        cacheFile = open(cachePath + '.pkl', 'wb')
         norm = {'minVector': minVector, 'maxVector': maxVector,
                 'avgVector': avgVector, 'stdVector': stdVector}
         pkl.dump(norm, cacheFile)
