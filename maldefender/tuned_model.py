@@ -156,6 +156,8 @@ def trainThenPredict(trainSet: List[S2VGraph],
     log.info(f'Net training time = {time.process_time() - startTime} seconds')
     storeConfusionMatrix(trainPred, trainLabels, 'train')
     storeConfusionMatrix(validPred, validLabels, 'valid')
+    computePrScores(trainPred, trainLabels, 'train', None, store=True)
+    computePrScores(validPred, validLabels, 'valid', None, store=True)
     result = {
         'TrainLoss': trainLossHist,
         'TrainAccu': trainAccuHist,
@@ -168,7 +170,7 @@ def trainThenPredict(trainSet: List[S2VGraph],
         'ValidRecl': validRecallHist,
         'ValidF1': validF1Hist,
     }
-    log.info(f'Model trainset + validset performance:\n{validLossHist}')
+    log.info(f'Model validset loss:\n{validLossHist}')
     df = pd.DataFrame.from_dict(result)
     histFile = open('%sPredHist.csv' % cmd_args.data, 'w')
     histFile.write("# %s\n" % str(gHP))

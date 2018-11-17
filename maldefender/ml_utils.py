@@ -283,11 +283,28 @@ def normalizeFeatures(graphs: List[S2VGraph],
     return [maxVector, minVector, avgVector, stdVector]
 
 
-def computePrScores(pred, labels, prefix) -> Dict[str, float]:
+def computePrScores(pred, labels, prefix: str = 'train',
+                    avgMethod: str ='weighted',
+                    store=False) -> Dict[str, float]:
     scores = {}
-    scores['precisions'] = precision_score(labels, pred, average='weighted')
-    scores['recalls'] = recall_score(labels, pred, average='weighted')
-    scores['weightedF1'] = f1_score(labels, pred, average='weighted')
+    if cmd_args.data == 'MSACFG':
+        scores['family'] = ['Ramnit', 'Lollipop', 'Kelihos_ver3', 'Vundo',
+                            'Simda', 'Tracur', 'Kelihos_ver1',
+                            'Obfuscator.ACY', 'Gatak']
+    elif cmd_args.data == 'YANACFG':
+        scores['family'] = ['Bagle', 'Bifrose', 'Hupigon', 'Koobface',
+                            'Ldpinch', 'Lmir', 'Rbot', 'Sdbot', 'Swizzor',
+                            'Vundo', 'Zbot', 'Zlob']
+
+    scores['precisions'] = precision_score(labels, pred, average=avgMethod)
+    scores['recalls'] = recall_score(labels, pred, average=avgMethod)
+    scores['F1score'] = f1_score(labels, pred, average=avgMethod)
+    if store:
+        df = pd.DataFrame.from_dict(scores)
+        file = open('%s_%s_pr_scores.csv' % (cmd_args.data, prefix), 'w')
+        df.to_csv(file, index=('family' in scores), float_format='%.6f')
+        file.close()
+
     return scores
 
 
@@ -330,3 +347,5 @@ def balancedSampling(graphs, neg_ratio=3):
 def toOnehot(indices, num_classes):
     onehot = torch.zeros(indices.size(0), num_classes, device=indices.device)
     return onehot.scatter_(1, indices.unsqueeze(1), 1)
+
+

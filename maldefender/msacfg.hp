@@ -16,14 +16,14 @@ convMaxPool = [[2, 2]]
 # MLP
 # rap, vanilla
 mlpType= ['vanilla']
-mlpHidden = [1024]
+mlpHidden = [512]
 dropOutRate = [0.5]
 
 # Training HPs
 lr = [0.01]
-batchSize = [40]
+batchSize = [20]
 cvFold = [5]
-numEpochs = [640]
+numEpochs = [64]
 l2RegFactor = [0.0005]
 
 noteMsg = ["Adaptive pooling + VGG"]
