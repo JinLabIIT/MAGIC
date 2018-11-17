@@ -109,7 +109,7 @@ if __name__ == '__main__':
     startTime = time.process_time()
     graphs = loadGraphsMayCache(cmd_args.train_dir)
     normalizeFeatures(graphs, useCachedTrain=cmd_args.use_cached_norm,
-                      operation='zero_mean')
+                      operation='min_max')
     dataReadyTime = time.process_time() - startTime
     log.info('Dataset ready takes %.2fs' % dataReadyTime)
 

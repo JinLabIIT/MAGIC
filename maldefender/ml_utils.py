@@ -90,6 +90,13 @@ class S2VGraph(object):
             log.debug(f'{binaryId} #nodes: {self.num_nodes}, label: {label}')
 
 
+def filterOutNoEdgeGraphs(graphs: List[S2VGraph]) -> List[S2VGraph]:
+     result = list(filter(lambda x: x.num_edges > 0, graphs))
+     numFiltered = len(result) - len(graphs)
+     log.info(f'Skip {numFiltered} graphs that have no edge')
+     return result
+
+
 def loadData(dataDir: str, isTestSet: bool = False) -> List[S2VGraph]:
     log.info('Loading data as list of S2VGraph(s)')
     gList: List[S2VGraph] = []
@@ -191,6 +198,7 @@ def loadGraphsMayCache(dataDir: str, isTestSet: bool = False) -> List[S2VGraph]:
 
 
 def kFoldSplit(k: int, graphs: List[S2VGraph]) -> List[List[S2VGraph]]:
+    random.shuffle(graphs)
     results = []
     share = math.ceil(len(graphs) / k)
     for i in range(k):

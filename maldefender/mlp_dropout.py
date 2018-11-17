@@ -79,7 +79,7 @@ class MLPClassifier(nn.Module):
     def forward(self, x, y=None):
         h1 = self.h1_weights(x)
         h1 = self.h1_bn(h1)
-        h1 = F.tanh(h1)
+        h1 = torch.tanh(h1)
         h1 = F.dropout(h1, p=self.dropout, training=self.training)
 
         h2 = self.h2_weights(h1)

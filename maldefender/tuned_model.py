@@ -11,7 +11,7 @@ import pandas as pd
 import torch.optim as optim
 from typing import Dict, List
 from ml_utils import cmd_args, gHP, kFoldSplit, S2VGraph
-from ml_utils import computePrScores, loadGraphsMayCache
+from ml_utils import computePrScores, loadGraphsMayCache, filterOutNoEdgeGraphs
 from ml_utils import storeConfusionMatrix, normalizeFeatures
 from e2e_model import Classifier, loopDataset, predictDataset
 from hyperparameters import parseHpTuning, HyperParameterIterator
@@ -104,8 +104,7 @@ def trainThenPredict(trainSet: List[S2VGraph],
     if cmd_args.mode == 'gpu':
         classifier = classifier.cuda()
 
-    optimizer = optim.SGD(classifier.parameters(),
-                          lr=gHP['lr'], momentum=0.9,
+    optimizer = optim.SGD(classifier.parameters(), momentum=0.9, lr=gHP['lr'],
                           weight_decay=gHP['l2RegFactor'])
     scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5,
                                   patience=2, verbose=True)
@@ -143,13 +142,14 @@ def trainThenPredict(trainSet: List[S2VGraph],
         scheduler.step(validScore[0])
 
         prScore = computePrScores(validPred, validLabels, 'valid')
-        print('\033[93mValid epoch %d: l %.5f\033[0m' % (e, validScore[0]))
+        line = '\033[93mValid epoch %d: l %.5f, a %.5f, p %.5f, r %.5f, f1 %.5f\033[0m'
+        print(line % (e, validScore[0], validScore[1], prScore['precisions'],
+                      prScore['recalls'], prScore['weightedF1']))
         validLossHist.append(validScore[0])
         validAccuHist.append(validScore[1])
         validPrecHist.append(prScore['precisions'])
         validRecallHist.append(prScore['recalls'])
         validF1Hist.append(prScore['weightedF1'])
-
         if e % 10 == 0:
             testWithModel(classifier, testGraphs)
 
@@ -168,7 +168,7 @@ def trainThenPredict(trainSet: List[S2VGraph],
         'ValidRecl': validRecallHist,
         'ValidF1': validF1Hist,
     }
-    log.info(f'Model trainset + validset performance:\n{result}')
+    log.info(f'Model trainset + validset performance:\n{validLossHist}')
     df = pd.DataFrame.from_dict(result)
     histFile = open('%sPredHist.csv' % cmd_args.data, 'w')
     histFile.write("# %s\n" % str(gHP))
@@ -225,6 +225,7 @@ if __name__ == '__main__':
     trainGraphs = loadGraphsMayCache(cmd_args.train_dir, False)
     normalizeFeatures(trainGraphs, useCachedTrain=cmd_args.use_cached_norm,
                       operation='zero_mean')
+    trainGraphs = filterOutNoEdgeGraphs(trainGraphs)
     dataReadyTime = time.process_time() - startTime
     log.info('Trainset ready takes %.2fs' % dataReadyTime)
 

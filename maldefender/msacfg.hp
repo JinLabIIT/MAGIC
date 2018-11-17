@@ -1,0 +1,29 @@
+# DGCNN HPs
+poolingRatio = [0.6]
+graphConvSize = [[32, 32, 32, 32]]
+poolingType = ['adaptive']
+conv2dChannels = [16]
+
+# Used ONLY if pooling == 'sort'
+remLayers = ['conv1d']
+
+# Used ONLY if remLayers == 'conv1d'
+s2vOutDim = [64]
+convChannels = [[16, 32]]
+convKernSizes = [[0, 5]]
+convMaxPool = [[2, 2]]
+
+# MLP
+# rap, vanilla
+mlpType= ['vanilla']
+mlpHidden = [1024]
+dropOutRate = [0.5]
+
+# Training HPs
+lr = [0.01]
+batchSize = [40]
+cvFold = [5]
+numEpochs = [640]
+l2RegFactor = [0.0005]
+
+noteMsg = ["Adaptive pooling + VGG"]
