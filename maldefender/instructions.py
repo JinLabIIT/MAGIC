@@ -17,6 +17,8 @@ class Instruction(object):
     # Type of const values in operator, mapped to feature vector index.
     operatorTypes = {'num_const': len(operandTypes),
                      'str_const': len(operandTypes) + 1}
+    specialChars = ['[', ']', '{', '}', '?', '@', '$']
+    spChar2Idx = {val: idx for (idx, val) in enumerate(specialChars)}
 
     def __init__(self, addr: str,
                  operand: str = '',
@@ -29,6 +31,8 @@ class Instruction(object):
 
         self.operand: str = operand
         self.operators: List[str] = operators
+        self.bytes: List[str] = []
+        self.rawStrs: List[str] = []
 
         self.size: int = 0
         self.start: bool = False
@@ -56,6 +60,27 @@ class Instruction(object):
             numeric_cnts, string_cnts = matchConstant(operator)
             features[0] += numeric_cnts
             features[1] += string_cnts
+
+        return features
+
+    def get1gramFeatures(self) -> List[int]:
+        features = [0] * 257
+        for byte in self.bytes:
+            byte = byte.rstrip('\n+')
+            if byte == '??':
+                features[256] += 1
+            else:
+                byteInt = int(byte, 16)
+                features[byteInt] += 1
+
+        return features
+
+    def getSpecialCharFeatures(self) -> List[int]:
+        features = [0] * len(Instruction.specialChars)
+        for line in self.rawStrs:
+            for c in line:
+                if c in Instruction.spChar2Idx:
+                    features[Instruction.spChar2Idx[c]] += 1
 
         return features
 

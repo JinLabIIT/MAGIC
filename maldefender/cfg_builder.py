@@ -14,7 +14,9 @@ from typing import List, Dict, Set
 class Block(object):
     """Block of control flow graph."""
     instDim = len(isn.Instruction.operandTypes) + \
-        len(isn.Instruction.operatorTypes)
+        len(isn.Instruction.operatorTypes) + \
+        257 + len(isn.Instruction.specialChars)
+
     """Types of structual-related vertex features"""
     vertexTypes = {'degree': instDim, 'num_inst': instDim + 1}
 
@@ -30,6 +32,8 @@ class Block(object):
         for inst in self.instList:
             attr = inst.getOperandFeatures()
             attr += inst.getOperatorFeatures()
+            attr += inst.get1gramFeatures()
+            attr += inst.getSpecialCharFeatures()
             instAttr += np.array(attr)
 
         degree = len(self.edgeList)
@@ -57,7 +61,8 @@ class ControlFlowGraphBuilder(object):
         self.program: Dict[str, str] = {}  # Addr to raw string instruction
         self.addr2Inst: OrderedDict[int, isn.Instruction] = OrderedDict()
         self.addr2InstAux: OrderedDict[int, isn.Instruction] = OrderedDict()
-
+        self.addr2Bytes: OrderedDict[int, List[str]] = OrderedDict()
+        self.addr2RawStr: OrderedDict[int, List[str]] = OrderedDict()
         self.addr2Block: Dict[int, Block] = {}
 
     def getControlFlowGraph(self) -> nx.DiGraph:
@@ -94,10 +99,18 @@ class ControlFlowGraphBuilder(object):
 
         return "NotInCodeSeg"
 
-    def indexOfInst(self, decodedElems: List[str]) -> int:
+    def appendRawBytes(self, addrStr: str, byte: str):
+        addr = int(addrStr, 16)
+        if addr in self.addr2Bytes:
+            self.addr2Bytes[addr].append(byte)
+        else:
+            self.addr2Bytes[addr] = [byte]
+
+    def indexOfInst(self, decodedElems: List[str], addrStr: str) -> int:
         idx = 0
-        bytePattern = re.compile(r'^[A-F0-9][A-F0-9]\+?$')
+        bytePattern = re.compile(r'^[A-F0-9?][A-F0-9?]\+?$')
         while idx < len(decodedElems) and bytePattern.match(decodedElems[idx]):
+            self.appendRawBytes(addrStr, decodedElems[idx])
             idx += 1
 
         return idx
@@ -130,13 +143,13 @@ class ControlFlowGraphBuilder(object):
                 lineNum += 1
                 continue
 
-            if len(decodedElems) > 0 and imcompleteByte.match(decodedElems[0]):
-                lineStr = " ".join(decodedElems)
-                log.debug(f'[ExtractSeg] Ignore imcomplete L{lineNum}: {lineStr}')
-                lineNum += 1
-                continue
+            # if len(decodedElems) > 0 and imcompleteByte.match(decodedElems[0]):
+            #     lineStr = " ".join(decodedElems)
+            #     log.debug(f'[ExtractSeg] Ignore imcomplete L{lineNum}: {lineStr}')
+            #     lineNum += 1
+            #     continue
 
-            startIdx = self.indexOfInst(decodedElems)
+            startIdx = self.indexOfInst(decodedElems, addr)
             endIdx = self.indexOfComment(decodedElems)
             if startIdx < endIdx:
                 instElems = [addr] + decodedElems[startIdx: endIdx]
@@ -158,7 +171,14 @@ class ControlFlowGraphBuilder(object):
 
         return False
 
-    def aggregate(self, addr: str, sameAddrInsts: List[str]) -> None:
+    def appendRawString(self, addr: int, instRawStrs: List[str]):
+        for inst in instRawStrs:
+            if addr in self.addr2RawStr:
+                self.addr2RawStr[addr].append(inst)
+            else:
+                self.addr2RawStr[addr] = [inst]
+
+    def aggregate(self, addrStr: str, sameAddrInsts: List[str]) -> None:
         """
         Case 1: Header info
         Case 2: 'xxxxxx proc near' => keep last inst
@@ -167,8 +187,11 @@ class ControlFlowGraphBuilder(object):
         Case 5: location label followed by regular inst
         Case 6: Just 1 regular inst
         """
+        addr = int(addrStr, 16)
+        self.appendRawString(addr, sameAddrInsts)
+
         if self.isHeaderInfo(sameAddrInsts):
-            self.program[addr] = sameAddrInsts[-1]
+            self.program[addrStr] = sameAddrInsts[-1]
             return
 
         validInst: List[str] = []
@@ -204,25 +227,26 @@ class ControlFlowGraphBuilder(object):
                 continue
             if inst.endswith(':'):
                 continue
+
             validInst.append(inst)
 
         if len(validInst) == 1:
             progLine = validInst[0] + ' ' + foundDataDeclare
-            self.program[addr] = progLine.rstrip(' ')
+            self.program[addrStr] = progLine.rstrip(' ')
             log.debug(f'[AggrInst] Aggregate succeed')
         elif len(foundDataDeclare.rstrip(' ')) > 0:
-            self.program[addr] = foundDataDeclare.rstrip(' ')
+            self.program[addrStr] = foundDataDeclare.rstrip(' ')
             log.debug(f'[AggrInst] Concat all DataDef into unified inst')
         else:
             # Concat unaggregatable insts
-            log.debug(f'[AggrInst:{self.binaryId}] Fail aggregating insts at {addr}')
+            log.debug(f'[AggrInst:{self.binaryId}] Fail aggregating insts at {addrStr}')
             progLine = ''
             for inst in validInst:
                 progLine += inst.rstrip('\n\\') + ' '
-                log.debug('[AggrInst] %s: %s' % (addr, inst))
+                log.debug('[AggrInst] %s: %s' % (addrStr, inst))
 
             log.debug(f'[AggrInst:{self.binaryId}] Concat to: {progLine}')
-            self.program[addr] = progLine.rstrip(' ')
+            self.program[addrStr] = progLine.rstrip(' ')
 
     def createProgram(self) -> None:
         """Generate unique-addressed program, store in self.program"""
@@ -281,13 +305,21 @@ class ControlFlowGraphBuilder(object):
         log.debug(f'[VisitInsts] Visiting insts in {self.binaryId}')
         for addr, inst in self.addr2Inst.items():
             inst.accept(self)
+            if addr in self.addr2Bytes:
+                inst.bytes = self.addr2Bytes[addr]
+            else:
+                log.warning(f'{addr:X} don\'t have any bytes')
+
+            if addr in self.addr2RawStr:
+                inst.rawStrs = self.addr2RawStr[addr]
+            else:
+                log.warning(f'{addr:X} don\'t have any raw string')
 
         self.addr2Inst.update(self.addr2InstAux)
 
     def addAuxilaryInst(self, addr, operandName='') -> None:
         if addr not in self.addr2InstAux:
-            self.addr2InstAux[addr] = isn.Instruction(
-                addr, operand=operandName)
+            self.addr2InstAux[addr] = isn.Instruction(addr, operand=operandName)
             self.addr2InstAux[addr].start = True
             self.addr2InstAux[addr].fallThrough = False
 

@@ -35,13 +35,13 @@
 .text:00401048		assume es:nothing, ss:nothing, ds:_data,	fs:nothing, gs:nothing
 .text:00401048 8E 7D    repe    mov edi, 65
 
-.text:00401050 5E 47	start:
+.text:00401050 start:
 .text:00401050 5E 47		jmp     short 401054
 
-.text:00401052 C2 04		bad_interrupt:
+.text:00401052 bad_interrupt:
 .text:00401052 C2 04		reti
 
-.text:00401054 54 56    begin:
+.text:00401054 begin:
 .text:00401054 54 56            dd      56Ah
 .text:00401054 54 77            dw      49h
 .text:00401054 CC CC		mov     edi, eax
@@ -50,21 +50,21 @@
 .text:00401057 FF DD            xmmword_40382100        xmmword 80000000000000008000000000000000h
 .text:00401060 8B 44		mov     eax, [esp+8]
 
-.text:00401064 8A 08	loop:
+.text:00401064 loop:
 .text:00401064 8A 08		mov     cl, [eax]
 .text:00401066 8B 54		mov     edx, [esp+4]
 .text:00401068 88 0B        call    sub_4010AE
 .text:0040106A 88 0A		call    sub_401084
 .text:0040106C C3 55		jnz     loc_00401064 ; loop
 
-.text:0040106D CC CC	again:
+.text:0040106D again:
 .text:0040106D CC CC		sub     eax, 10h
 .text:00401070 8B 44		mov     eax, [esp+4]
 .text:00401074 8D 50		jnz     short loc_00401054 ; jmp to begin
 
 .text:00401076 8D 50		lea     edx, [eax+1]
 
-.text:00401079 55 41	wait:
+.text:00401079 wait:
 .text:00401079 8A 08		mov     cl, [eax]
 .text:0040107A 40 45		add     eax, 55h
 .text:0040107C 84 C9		call    ??_memcpy_s
