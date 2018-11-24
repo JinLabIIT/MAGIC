@@ -132,9 +132,9 @@ def trainThenPredict(trainSet: List[S2VGraph],
         print('\033[92mTrain epoch %d: l %.5f\033[0m' % (e, avgScore[0]))
         trainLossHist.append(avgScore[0])
         trainAccuHist.append(avgScore[1])
-        trainPrecHist.append(prScore['precisions'])
-        trainRecallHist.append(prScore['recalls'])
-        trainF1Hist.append(prScore['weightedF1'])
+        trainPrecHist.append(prScore['Precision'])
+        trainRecallHist.append(prScore['Recall'])
+        trainF1Hist.append(prScore['F1'])
 
         classifier.eval()
         validScore, validPred, validLabels = loopDataset(
@@ -143,13 +143,13 @@ def trainThenPredict(trainSet: List[S2VGraph],
 
         prScore = computePrScores(validPred, validLabels, 'valid')
         line = '\033[93mValid epoch %d: l %.5f, a %.5f, p %.5f, r %.5f, f1 %.5f\033[0m'
-        print(line % (e, validScore[0], validScore[1], prScore['precisions'],
-                      prScore['recalls'], prScore['weightedF1']))
+        print(line % (e, validScore[0], validScore[1], prScore['Precision'],
+                      prScore['Recall'], prScore['F1']))
         validLossHist.append(validScore[0])
         validAccuHist.append(validScore[1])
-        validPrecHist.append(prScore['precisions'])
-        validRecallHist.append(prScore['recalls'])
-        validF1Hist.append(prScore['weightedF1'])
+        validPrecHist.append(prScore['Precision'])
+        validRecallHist.append(prScore['Recall'])
+        validF1Hist.append(prScore['F1'])
         if e % 10 == 0:
             testWithModel(classifier, testGraphs)
 

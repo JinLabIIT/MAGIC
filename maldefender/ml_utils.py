@@ -91,10 +91,10 @@ class S2VGraph(object):
 
 
 def filterOutNoEdgeGraphs(graphs: List[S2VGraph]) -> List[S2VGraph]:
-     result = list(filter(lambda x: x.num_edges > 0, graphs))
-     numFiltered = len(result) - len(graphs)
-     log.info(f'Skip {numFiltered} graphs that have no edge')
-     return result
+    result = list(filter(lambda x: x.num_edges > 0, graphs))
+    numFiltered = len(result) - len(graphs)
+    log.info(f'Skip {numFiltered} graphs that have no edge')
+    return result
 
 
 def loadData(dataDir: str, isTestSet: bool = False) -> List[S2VGraph]:
@@ -288,17 +288,19 @@ def computePrScores(pred, labels, prefix: str = 'train',
                     store=False) -> Dict[str, float]:
     scores = {}
     if cmd_args.data == 'MSACFG':
-        scores['family'] = ['Ramnit', 'Lollipop', 'Kelihos_ver3', 'Vundo',
-                            'Simda', 'Tracur', 'Kelihos_ver1',
-                            'Obfuscator.ACY', 'Gatak']
+        scores['family'] = [
+            'Ramnit', 'Lollipop', 'KeliVer3', 'Vundo', 'Simda', 'Tracur',
+            'KeliVer1', 'Obf.ACY', 'Gatak'
+        ]
     elif cmd_args.data == 'YANACFG':
-        scores['family'] = ['Bagle', 'Bifrose', 'Hupigon', 'Koobface',
-                            'Ldpinch', 'Lmir', 'Rbot', 'Sdbot', 'Swizzor',
-                            'Vundo', 'Zbot', 'Zlob']
+        scores['family'] = [
+            'Bagle',  'Benign', 'Bifrose', 'Hupigon', 'Koobface', 'Ldpinch',
+            'Lmir','Rbot', 'Sdbot', 'Swizzor', 'Vundo', 'Zbot', 'Zlob'
+        ]
 
-    scores['precisions'] = precision_score(labels, pred, average=avgMethod)
-    scores['recalls'] = recall_score(labels, pred, average=avgMethod)
-    scores['F1score'] = f1_score(labels, pred, average=avgMethod)
+    scores['Precision'] = precision_score(labels, pred, average=avgMethod)
+    scores['Recall'] = recall_score(labels, pred, average=avgMethod)
+    scores['F1'] = f1_score(labels, pred, average=avgMethod)
     if store:
         df = pd.DataFrame.from_dict(scores)
         file = open('%s_%s_pr_scores.csv' % (cmd_args.data, prefix), 'w')
@@ -347,5 +349,3 @@ def balancedSampling(graphs, neg_ratio=3):
 def toOnehot(indices, num_classes):
     onehot = torch.zeros(indices.size(0), num_classes, device=indices.device)
     return onehot.scatter_(1, indices.unsqueeze(1), 1)
-
-
