@@ -17,8 +17,8 @@ if __name__ == '__main__':
         '../../YANACFG/Nov15TrainValidScores/YANACFG_valid_confusion_matrix.txt',
     ]
     families = [
-        ['Ramnit', 'Lollipop', 'KeliVer3', 'Vundo', 'Simda', 'Tracur',
-         'KeliVer1', 'Obf.ACY', 'Gatak'],
+        ['Ramnit', 'Lollipop', 'Kelihos_Ver3', 'Vundo', 'Simda', 'Tracur',
+         'Kelihos\_Ver1', 'Obfuscator.ACY', 'Gatak'],
         ['Bagle', 'Benign', 'Bifrose', 'Hupigon', 'Koobface', 'Ldpinch',
          'Lmir', 'Rbot', 'Sdbot', 'Swizzor', 'Vundo', 'Zbot', 'Zlob']
     ]
