@@ -106,7 +106,7 @@ class TestCfgBuildedr(unittest.TestCase):
         super(TestCfgBuildedr, self).setUp()
         # self.skipTest('Uncomment me to skip this test case')
 
-    @unittest.skip("Uncomment to run")
+    @unittest.skip("Comment to run")
     def testParseInstructions(self):
         pathPrefix = '../../MSACFG/TrainSet'
         binaryIds = [
@@ -129,7 +129,7 @@ class TestCfgBuildedr(unittest.TestCase):
             cfgBuilder = ControlFlowGraphBuilder(bId, pathPrefix)
             cfgBuilder.parseInstructions()
 
-    # @unittest.skip("Uncomment to run")
+    # @unittest.skip("Comment to run")
     def testBuildControlFlowGraph(self):
         pathPrefix = '../DataSamples'
         bId = 'test'
@@ -181,7 +181,7 @@ class TestCfgBuildedr(unittest.TestCase):
         self.assertEqual(cfgBuilder.cfg.number_of_edges(), len(expectedEdges),
                          '#edge in CFG != expected #edges')
 
-    @unittest.skip("Uncomment to run")
+    @unittest.skip("Comment to run")
     def testBuildControlFlowGraphBatch(self):
         pathPrefix = '../../MSACFG/TrainSet'
         binaryIds = [
@@ -204,7 +204,7 @@ class TestCfgBuildedr(unittest.TestCase):
             cfgBuilder = ControlFlowGraphBuilder(bId, pathPrefix)
             cfgBuilder.buildControlFlowGraph()
 
-    @unittest.skip("Uncomment to run")
+    @unittest.skip("Comment to run")
     def testEmptyCodeSeg(self):
         pathPrefix = '../../MSACFG/TrainSet'
         binaryIds = [
@@ -241,7 +241,7 @@ class TestCfgBuildedr(unittest.TestCase):
             seenInst = cfgBuilder.parseInstructions()
             self.assertEqual(len(seenInst), 0, "%s.asm is not empty" % bId)
 
-    @unittest.skip("Uncomment to run")
+    @unittest.skip("Comment to run")
     def testEvalHexExpr(self):
         expressions = ['14769F + 48D - 48Dh - 14769Fh+ 14769F',
                        '4477DAB5F7',
@@ -251,7 +251,7 @@ class TestCfgBuildedr(unittest.TestCase):
         for expr, expected in zip(expressions, expectedRet):
             self.assertEqual(evalHexAddSubExpr(expr), expected)
 
-    # @unittest.skip("Uncomment to run")
+    # @unittest.skip("Comment to run")
     def testNodeAttributes(self):
         pathPrefix = '../DataSamples'
         bId = 'test'
@@ -280,13 +280,13 @@ class TestAcfgPipeline(unittest.TestCase):
         worker = AcfgWorker(pathPrefix, binaryIds)
         worker.discoverInstDictionary('TestSetInstDictionary')
 
-    @unittest.skip("Uncomment to run")
+    @unittest.skip("Comment to run")
     def testCmpInstDict(self):
         trainDictPath = 'InstDictionary.csv'
         testDictPath = 'TestSetInstDictionary.csv'
         print(cmpInstDict(trainDictPath, testDictPath))
 
-    @unittest.skip("Uncomment to run")
+    @unittest.skip("Comment to run")
     def testWorkerRun(self):
         pathPrefix = '../../MSACFG/TrainSet'
         binaryIds1 = [
@@ -313,7 +313,7 @@ class TestAcfgPipeline(unittest.TestCase):
         featureVectors = featuresInTestAsm()
         expectedRet = [
             [1],      # number of graphs
-            [21, '?', 'test'],  # number of nodes, label of graph
+            [21, '?', 'test'],  # number of nodes, label of graph, graph_id
             [1,2,10,13,     ],  # -2  0
             [1,0,           ],  # -1  1
             [1,1,20,        ],  # FF  2
@@ -353,7 +353,7 @@ class TestAcfgPipeline(unittest.TestCase):
                                  'L%d exp != result' % lineNum)
                 lineNum += 1
 
-    # @unittest.skip("Uncomment to run")
+    # @unittest.skip("Comment to skip")
     def testMasterDispatch(self):
         pathPrefix = '../../MSACFG/TrainSet'
         labelPath = '../../MSACFG/trainLabels.csv'
@@ -389,7 +389,7 @@ class TestAcfgPipeline(unittest.TestCase):
                             'TestMasterTestSet', binaryIds)
         master.dispatchWorkers(1)
 
-    # @unittest.skip("Uncomment to run")
+    @unittest.skip("Comment to run")
     def testIfSkipEmptyCfgs(self):
         pathPrefix = '../../MSACFG/TrainSet'
         labelPath = '../../MSACFG/trainLabels.csv'
@@ -412,7 +412,7 @@ class TestAcfgPipeline(unittest.TestCase):
             content = f.read()
             self.assertEqual(int(content), 0, '#graphs should be zero')
 
-    # @unittest.skip("Uncomment to run")
+    # @unittest.skip("Comment to run")
     def testValidAddrFormat(self):
         pathPrefix = '../../MSACFG/TrainSet'
         labelPath = '../../MSACFG/trainLabels.csv'

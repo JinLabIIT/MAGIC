@@ -92,10 +92,10 @@ class ControlFlowGraphBuilder(object):
             '.text:', 'CODE:', 'UPX1:', 'seg000:', 'qmoyiu:',
             '.UfPOkc:', '.brick:', '.icode:', 'seg001:',
             '.Much:', 'iuagwws:', '.idata:', '.IqR:', '.data:',
-            '.unpack:', '_1:', '.Upack:', '.mF:',]
+            '.unpack:', '_1:', '.Upack:', '.mF:']
         for prefix in segNames:
             if seg.startswith(prefix) is True:
-                return seg[len(prefix):]
+                return seg[-8:]
 
         return "NotInCodeSeg"
 
@@ -142,12 +142,6 @@ class ControlFlowGraphBuilder(object):
                 log.debug(f"[ExtractSeg] Line {lineNum} out of text segment")
                 lineNum += 1
                 continue
-
-            # if len(decodedElems) > 0 and imcompleteByte.match(decodedElems[0]):
-            #     lineStr = " ".join(decodedElems)
-            #     log.debug(f'[ExtractSeg] Ignore imcomplete L{lineNum}: {lineStr}')
-            #     lineNum += 1
-            #     continue
 
             startIdx = self.indexOfInst(decodedElems, addr)
             endIdx = self.indexOfComment(decodedElems)
