@@ -91,11 +91,16 @@ class ControlFlowGraphBuilder(object):
         segNames = [
             '.text:', 'CODE:', 'UPX1:', 'seg000:', 'qmoyiu:',
             '.UfPOkc:', '.brick:', '.icode:', 'seg001:',
-            '.Much:', 'iuagwws:', '.idata:', '.IqR:', '.data:',
-            '.unpack:', '_1:', '.Upack:', '.mF:']
+            '.Much:', 'iuagwws:', '.idata:', '.edata:',
+            '.IqR:', '.data:', '.bss:', '.idata:', '.rsrc:',
+            '.tls:', '.reloc:', '.unpack:', '_1:', '.Upack:', '.mF:']
         for prefix in segNames:
             if seg.startswith(prefix) is True:
-                return seg[-8:]
+                colonIdx = seg.rfind(':')
+                if colonIdx != -1:
+                    return seg[colonIdx + 1:]
+                else:
+                    return seg[-8:]
 
         return "NotInCodeSeg"
 

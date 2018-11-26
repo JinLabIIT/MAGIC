@@ -384,6 +384,7 @@ class TestAcfgPipeline(unittest.TestCase):
             'OuCDNHRltBVZJGzv4KI8',
             'R1hJ8LGFtZj35BlNxm7q',
             'tdsNQiObHye2g1JfoB84',
+            'mnNcAzZ6aCpsvd8D30tT',
         ]
         master = AcfgMaster(pathPrefix, labelPath,
                             'TestMasterTestSet', binaryIds)
@@ -418,6 +419,7 @@ class TestAcfgPipeline(unittest.TestCase):
         labelPath = '../../MSACFG/trainLabels.csv'
         binaryIds = [
             '1x2u5Ws7tzFRAgyqoJBV',
+            'i4f81CyIkZtEprWaOVRS',
         ]
         master = AcfgMaster(pathPrefix, labelPath,
                             'TestValidAddrFormat', binaryIds)
@@ -449,3 +451,4 @@ class TestAcfgRunningTime(unittest.TestCase):
 if __name__ == '__main__':
     log.setLevel("INFO")
     unittest.main()
+
