@@ -2,7 +2,7 @@
 
 DATA="${1-MSACFG}"
 GPU="${2-1}"  # select the GPU number, 0-3
-HP_PATH="${3-none}"
+HP_PATH="${3-msacfg.hp}"
 
 # general/default settings
 gpu_or_cpu=gpu
@@ -10,7 +10,6 @@ train_dir=../../${DATA}/TrainSet
 test_dir=../../${DATA}/TestSet
 use_cached_data=True
 cache_path=cached_${DATA,,}_graphs
-use_cached_norm=True
 norm_path=norm_${DATA,,}
 
 CUDA_VISIBLE_DEVICES=${GPU} python3.7 tuned_model.py        \
@@ -22,7 +21,6 @@ CUDA_VISIBLE_DEVICES=${GPU} python3.7 tuned_model.py        \
   -gpu_id ${GPU}                                            \
   -use_cached_data ${use_cached_data}                       \
   -cache_path ${cache_path}                                 \
-  -use_cached_norm ${use_cached_norm}                       \
   -norm_path ${norm_path}                                   \
   -hp_path ${HP_PATH}
 

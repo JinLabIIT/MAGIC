@@ -101,15 +101,13 @@ def crossValidate(graphFolds: List[List[S2VGraph]], runId: int) -> None:
 
 if __name__ == '__main__':
     log.setLevel("INFO")
-
     random.seed(cmd_args.seed)
     np.random.seed(cmd_args.seed)
     torch.manual_seed(cmd_args.seed)
 
     startTime = time.process_time()
     graphs = loadGraphsMayCache(cmd_args.train_dir)
-    normalizeFeatures(graphs, useCachedTrain=cmd_args.use_cached_norm,
-                      operation='zero_mean')
+    normalizeFeatures(graphs, isTestSet=False, operation='min_max')
     dataReadyTime = time.process_time() - startTime
     log.info('Dataset ready takes %.2fs' % dataReadyTime)
 

@@ -218,15 +218,13 @@ if __name__ == '__main__':
     else:
         startTime = time.process_time()
         testGraphs = loadGraphsMayCache(cmd_args.test_dir, True)
-        normalizeFeatures(testGraphs, useCachedTest=cmd_args.use_cached_norm,
-                          operation='zero_mean')
+        normalizeFeatures(testGraphs, isTestSet=True, operation='min_max')
         dataReadyTime = time.process_time() - startTime
         log.info('Testset ready takes %.2fs' % dataReadyTime)
 
     startTime = time.process_time()
     trainGraphs = loadGraphsMayCache(cmd_args.train_dir, False)
-    normalizeFeatures(trainGraphs, useCachedTrain=cmd_args.use_cached_norm,
-                      operation='zero_mean')
+    normalizeFeatures(trainGraphs, isTestSet=False, operation='min_max')
     trainGraphs = filterOutNoEdgeGraphs(trainGraphs)
     dataReadyTime = time.process_time() - startTime
     log.info('Trainset ready takes %.2fs' % dataReadyTime)

@@ -36,8 +36,8 @@ cmd_opt.add_argument('-use_cached_data', type=str, default='False',
                      help='if use previously cached dataset')
 cmd_opt.add_argument('-cache_path', type=str, default='cached_graphs',
                      help='which cached data to use or write new data to')
-cmd_opt.add_argument('-use_cached_norm', type=str, default='False',
-                     help='if use previously calculated min/max/avg/std for feature scaling')
+cmd_opt.add_argument('-norm_op', type=str, default='min_max',
+                     help='scaling operation: [min_max, zero_mean, none]')
 cmd_opt.add_argument('-norm_path', type=str, default='norm',
                      help='which cached data to use or write new data to')
 cmd_opt.add_argument('-hp_path', type=str, default='none',
@@ -45,7 +45,6 @@ cmd_opt.add_argument('-hp_path', type=str, default='none',
 gHP = dict()
 cmd_args, _ = cmd_opt.parse_known_args()
 cmd_args.use_cached_data = (cmd_args.use_cached_data == "True")
-cmd_args.use_cached_norm = (cmd_args.use_cached_norm == "True")
 log.info("Parsed cmdline arguments: %s" % cmd_args)
 testBinaryIds = {
     'cqdUoQDaZfGkt5ilBe7n': 0,
@@ -104,6 +103,7 @@ def loadData(dataDir: str, isTestSet: bool = False) -> List[S2VGraph]:
     numClasses = 0
     f = open('%s/%s.txt' % (dataDir, cmd_args.data), 'r')
     numGraphs = int(f.readline().strip())
+    maxVector, minVector, avgVector, stdVector = None, None, None, None
 
     for i in range(numGraphs):
         row = f.readline().strip().split()
@@ -141,6 +141,16 @@ def loadData(dataDir: str, isTestSet: bool = False) -> List[S2VGraph]:
 
             if features is not None:
                 nodeFeatures.append(features)
+                if maxVector is not None:
+                    maxVector = np.maximum(features, maxVector)
+                    minVector = np.minimum(features, minVector)
+                    avgVector = np.add(features, avgVector)
+                    stdVector = np.add(np.square(features), stdVector)
+                else:
+                    maxVector = features
+                    minVector = features
+                    avgVector = features
+                    stdVector = np.square(features)
 
             for k in neighbors:
                 g.add_edge(j, k)
@@ -153,6 +163,21 @@ def loadData(dataDir: str, isTestSet: bool = False) -> List[S2VGraph]:
 
         assert g.number_of_nodes() == numNodes
         gList.append(S2VGraph(bId, g, label, nodeTags, nodeFeatures))
+
+    totalNumNodes = np.sum([g.num_nodes for g in gList])
+    avgVector = avgVector / totalNumNodes
+    stdVector = np.sqrt(stdVector / totalNumNodes - np.square(avgVector))
+    cachePath = cmd_args.norm_path + '_test' if isTestSet else cmd_args.norm_path
+    log.info(f'Dumping min/max/avg/std vectors to {cachePath}')
+    log.debug(f'Max feature vector: {list(maxVector)}')
+    log.debug(f'Min feature vector: {list(minVector)}')
+    log.debug(f'Avg feature vector: {list(avgVector)}')
+    log.debug(f'Std feature vector: {list(stdVector)}')
+    cacheFile = open(cachePath + '.pkl', 'wb')
+    norm = {'minVector': minVector, 'maxVector': maxVector,
+            'avgVector': avgVector, 'stdVector': stdVector}
+    pkl.dump(norm, cacheFile)
+    cacheFile.close()
 
     gHP['numClasses'] = numClasses
     gHP['nodeTagDim'] = len(tagDict)
@@ -210,50 +235,23 @@ def kFoldSplit(k: int, graphs: List[S2VGraph]) -> List[List[S2VGraph]]:
     return results
 
 
-def loadNormVectors(graphs, useCachedTrain: bool = False,
-                    useCachedTest: bool = False) -> Tuple[List[float]]:
-    cachePath = cmd_args.norm_path
-    if useCachedTest == True:
-        cachePath += '_test'
-
-    if useCachedTrain or useCachedTest:
-        log.info(f'Loading previous min/max/avg/std vectors from {cachePath}')
-        cacheFile = open(cachePath + '.pkl', 'rb')
-        norm = pkl.load(cacheFile)
-        maxVector = norm['maxVector']
-        minVector = norm['minVector']
-        avgVector = norm['avgVector']
-        stdVector = norm['stdVector']
-        cacheFile.close()
-    else:
-        nodeFeatures = None
-        for g in graphs:
-            if nodeFeatures is None:
-                nodeFeatures = np.array(g.node_features)
-            else:
-                nodeFeatures = np.concatenate((nodeFeatures, g.node_features),
-                                              axis=0)
-
-        log.debug(f'Dim of features of all nodes: {nodeFeatures.shape}')
-        maxVector = np.amax(nodeFeatures, axis=0)
-        minVector = np.amin(nodeFeatures, axis=0)
-        avgVector = np.mean(nodeFeatures, axis=0)
-        stdVector = np.std(nodeFeatures, axis=0)
-        log.info(f'Dumping calculated min/max/avg/std vectors to {cachePath}')
-        cacheFile = open(cachePath + '.pkl', 'wb')
-        norm = {'minVector': minVector, 'maxVector': maxVector,
-                'avgVector': avgVector, 'stdVector': stdVector}
-        pkl.dump(norm, cacheFile)
-        cacheFile.close()
-
+def loadNormVectors(graphs, isTestSet: bool = False) -> Tuple[List[float]]:
+    cachePath = cmd_args.norm_path + '_test' if isTestSet else cmd_args.norm_path
+    log.info(f'Loading pre-computed min/max/avg/std vectors from {cachePath}')
+    cacheFile = open(cachePath + '.pkl', 'rb')
+    norm = pkl.load(cacheFile)
+    maxVector = norm['maxVector']
+    minVector = norm['minVector']
+    avgVector = norm['avgVector']
+    stdVector = norm['stdVector']
+    cacheFile.close()
     return (maxVector, minVector, avgVector, stdVector)
 
 
 def normalizeFeatures(graphs: List[S2VGraph],
-                      useCachedTrain: bool = False,
-                      useCachedTest: bool = False,
+                      isTestSet: bool = False,
                       operation: str = 'min_max') -> List[List[float]]:
-    normVectors = loadNormVectors(graphs, useCachedTrain, useCachedTest)
+    normVectors = loadNormVectors(graphs, isTestSet)
     maxVector, minVector, avgVector, stdVector = normVectors
     log.info(f'Max feature vector: {list(maxVector)}')
     log.info(f'Min feature vector: {list(minVector)}')
@@ -267,6 +265,7 @@ def normalizeFeatures(graphs: List[S2VGraph],
         if math.isclose(pair[0], pair[1]):
             reduceDims.append(i)
 
+    log.info(f'Delete constant features: {reduceDims}')
     for g in graphs:
         if operation == 'min_max':
             g.node_features = (g.node_features - minVector) / diffVector
@@ -278,7 +277,6 @@ def normalizeFeatures(graphs: List[S2VGraph],
         for i in reduceDims:
             g.node_features = np.delete(g.node_features, i, axis=1)
 
-    log.info(f'Delete constant features: {reduceDims}')
     gHP['featureDim'] -= len(reduceDims)
     return [maxVector, minVector, avgVector, stdVector]
 
