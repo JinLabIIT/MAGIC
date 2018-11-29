@@ -347,3 +347,8 @@ def balancedSampling(graphs, neg_ratio=3):
 def toOnehot(indices, num_classes):
     onehot = torch.zeros(indices.size(0), num_classes, device=indices.device)
     return onehot.scatter_(1, indices.unsqueeze(1), 1)
+
+
+def getLearningRate(optimizer):
+    for param_group in optimizer.param_groups:
+        return param_group['lr']

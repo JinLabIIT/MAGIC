@@ -195,7 +195,7 @@ def predictDataset(gList: List[S2VGraph], classifier: Classifier):
     """Inference batch by batch on large dataset"""
     indices = list(range(len(gList)))
     allPred = []
-    bsize = gHP['batchSize']
+    bsize = min(10, gHP['batchSize'])
     totalIters = math.ceil(len(gList) / bsize)
     pbar = tqdm(range(totalIters), unit='batch')
     pbar.set_description('predicting')

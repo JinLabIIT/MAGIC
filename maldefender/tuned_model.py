@@ -11,8 +11,9 @@ import pandas as pd
 import torch.optim as optim
 from typing import Dict, List
 from ml_utils import cmd_args, gHP, kFoldSplit, S2VGraph
-from ml_utils import computePrScores, loadGraphsMayCache, filterOutNoEdgeGraphs
+from ml_utils import computePrScores, loadGraphsMayCache
 from ml_utils import storeConfusionMatrix, normalizeFeatures
+from ml_utils import getLearningRate, filterOutNoEdgeGraphs
 from e2e_model import Classifier, loopDataset, predictDataset
 from hyperparameters import parseHpTuning, HyperParameterIterator
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -106,8 +107,8 @@ def trainThenPredict(trainSet: List[S2VGraph],
 
     optimizer = optim.SGD(classifier.parameters(), momentum=0.9, lr=gHP['lr'],
                           weight_decay=gHP['l2RegFactor'])
-    scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5,
-                                  patience=2, verbose=True)
+    scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.1, patience=3,
+                                  verbose=True, min_lr=1e-5)
     kFoldGraphs = kFoldSplit(max(gHP['cvFold'], 5), trainSet)
     trainGraphs = []
     for foldGraphs in kFoldGraphs[:-1]:
@@ -151,7 +152,13 @@ def trainThenPredict(trainSet: List[S2VGraph],
         validRecallHist.append(prScore['Recall'])
         validF1Hist.append(prScore['F1'])
         if e % 10 == 0:
+            log.info(f'First 10 train indices: {trainIndices[:10]}')
             testWithModel(classifier, testGraphs)
+
+        if getLearningRate(optimizer) < 1e-4:
+            if validLossHist[-1] > validLossHist[-2]:
+                gHP['batchSize'] += 10
+                log.info(f'Epoch {e}: inc batch size to {gHP["batchSize"]}')
 
     log.info(f'Net training time = {time.process_time() - startTime} seconds')
     storeConfusionMatrix(trainPred, trainLabels, 'train')
@@ -212,15 +219,16 @@ if __name__ == '__main__':
     np.random.seed(cmd_args.seed)
     torch.manual_seed(cmd_args.seed)
 
-    if cmd_args.data == 'YANACFG':
-        log.warning(f'No testset for YANACFG data')
-        testGraphs = None
-    else:
-        startTime = time.process_time()
-        testGraphs = loadGraphsMayCache(cmd_args.test_dir, True)
-        normalizeFeatures(testGraphs, isTestSet=True, operation='min_max')
-        dataReadyTime = time.process_time() - startTime
-        log.info('Testset ready takes %.2fs' % dataReadyTime)
+    # if cmd_args.data == 'YANACFG':
+    #     log.warning(f'No testset for YANACFG data')
+    #     testGraphs = None
+    # else:
+    #     startTime = time.process_time()
+    #     testGraphs = loadGraphsMayCache(cmd_args.test_dir, True)
+    #     normalizeFeatures(testGraphs, isTestSet=True, operation='min_max')
+    #     dataReadyTime = time.process_time() - startTime
+    #     log.info('Testset ready takes %.2fs' % dataReadyTime)
+    testGraphs = None
 
     startTime = time.process_time()
     trainGraphs = loadGraphsMayCache(cmd_args.train_dir, False)

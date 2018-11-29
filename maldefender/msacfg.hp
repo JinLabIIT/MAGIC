@@ -1,6 +1,6 @@
 # DGCNN HPs
-poolingRatio = [0.8]
-graphConvSize = [[32, 32, 32, 32]]
+poolingRatio = [0.5]
+graphConvSize = [[128, 64, 32, 32]]
 poolingType = ['sort']
 conv2dChannels = [16]
 
@@ -8,7 +8,7 @@ conv2dChannels = [16]
 remLayers = ['conv1d']
 
 # Used ONLY if remLayers == 'conv1d'
-s2vOutDim = [64]
+s2vOutDim = [32]
 convChannels = [[16, 32]]
 convKernSizes = [[0, 5]]
 convMaxPool = [[2, 2]]
@@ -16,13 +16,13 @@ convMaxPool = [[2, 2]]
 # MLP
 # rap, vanilla
 mlpType= ['vanilla']
-mlpHidden = [512]
+mlpHidden = [64]
 dropOutRate = [0.5]
 
 # Training HPs
 lr = [0.01]
-batchSize = [20]
-cvFold = [5]
+batchSize = [10]
+cvFold = [10]
 numEpochs = [100]
 l2RegFactor = [0.0005]
 

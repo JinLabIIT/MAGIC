@@ -11,7 +11,7 @@ import pandas as pd
 import torch.optim as optim
 from typing import Dict, List
 from ml_utils import cmd_args, gHP, S2VGraph, normalizeFeatures
-from ml_utils import loadGraphsMayCache, kFoldSplit
+from ml_utils import loadGraphsMayCache, kFoldSplit, getLearningRate
 from e2e_model import Classifier, loopDataset
 from hyperparameters import HyperParameterIterator, parseHpTuning
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -27,8 +27,8 @@ def trainThenValid(trainGraphs: List[S2VGraph], validGraphs: List[S2VGraph]):
     optimizer = optim.SGD(classifier.parameters(),
                           lr=gHP['lr'], momentum=0.9,
                           weight_decay=gHP['l2RegFactor'])
-    scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5,
-                                  patience=4, verbose=True)
+    scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.1, patience=3,
+                                  verbose=True, min_lr=1e-5)
     trainIndices = list(range(len(trainGraphs)))
     validIndices = list(range(len(validGraphs)))
     trainLossHist, validLossHist = [], []
@@ -49,6 +49,11 @@ def trainThenValid(trainGraphs: List[S2VGraph], validGraphs: List[S2VGraph]):
         print('\033[93mValid epoch %d: loss %.6f\033[0m' % (i, validScore[0]))
         validLossHist.append(validScore[0])
         scheduler.step(validScore[0])
+
+        if getLearningRate(optimizer) < 1e-4:
+            if validLossHist[-1] > validLossHist[-2]:
+                gHP['batchSize'] += 10
+                log.info(f'Epoch {e}: inc batch size to {gHP["batchSize"]}')
 
     log.info(f'Net training time = {time.process_time() - startTime} seconds')
     hist = {}
