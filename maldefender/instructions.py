@@ -63,18 +63,6 @@ class Instruction(object):
 
         return features
 
-    def get1gramFeatures(self) -> List[int]:
-        features = [0] * 257
-        for byte in self.bytes:
-            byte = byte.rstrip('\n+')
-            if byte == '??':
-                features[256] += 1
-            else:
-                byteInt = int(byte, 16)
-                features[byteInt] += 1
-
-        return features
-
     def getSpecialCharFeatures(self) -> List[int]:
         features = [0] * len(Instruction.specialChars)
         for line in self.rawStrs:

@@ -13,9 +13,16 @@ from typing import List, Dict, Set
 
 class Block(object):
     """Block of control flow graph."""
+    # Feature index: 11, 12, 13
+    oneGram = ['00', 'FF', '??']
+    oneGram2Idx = {k: v for (v, k) in enumerate(oneGram)}
+    # Feature index: 14 - 23
+    fourGram = ['????????', '04000000', '5DC30000', 'F0F0F001', '00100000',
+                '00F0F000', '0D2F0600', '5DC38BFF', '8BFF558B', '840D2F06']
+    fourGram2Idx = {k: v for (v, k) in enumerate(fourGram)}
     instDim = len(isn.Instruction.operandTypes) + \
         len(isn.Instruction.operatorTypes) + \
-        257 + len(isn.Instruction.specialChars)
+        len(oneGram) + len(fourGram) + len(isn.Instruction.specialChars)
 
     """Types of structual-related vertex features"""
     vertexTypes = {'degree': instDim, 'num_inst': instDim + 1}
@@ -27,12 +34,58 @@ class Block(object):
         self.instList: List[isn.Instruction] = []
         self.edgeList: List[int] = []
 
+    def bytesFromInsts(self) -> List[str]:
+        byteList = []
+        for inst in self.instList:
+            for byte in inst.bytes:
+                byte = byte.rstrip('\n+')
+                byteList.append(byte)
+
+        return byteList
+
+    def get1gramFeatures(self) -> List[int]:
+        features = [0] * len(Block.oneGram)
+        for byte in self.bytesFromInsts():
+            byte = byte.rstrip('\n+')
+            if byte in Block.oneGram2Idx:
+                features[Block.oneGram2Idx[byte]] += 1
+
+        return features
+
+    def get4gramFeatures(self) -> List[int]:
+        def check4Gram():
+            windowStr = ''.join(window)
+            if windowStr in Block.fourGram2Idx:
+                features[Block.fourGram2Idx[windowStr]] += 1
+
+        features = [0] * len(Block.fourGram)
+        window = []
+        for byte in self.bytesFromInsts():
+            if len(window) == 4:
+                check4Gram()
+                window.pop(0)
+
+            window.append(byte)
+
+        if len(window) == 4:
+            check4Gram()
+
+        return features
+
     def getAttributes(self):
         instAttr = np.zeros((1, Block.instDim))
+        added = False
         for inst in self.instList:
             attr = inst.getOperandFeatures()
             attr += inst.getOperatorFeatures()
-            attr += inst.get1gramFeatures()
+
+            if added is False:
+                attr += self.get1gramFeatures()
+                attr += self.get4gramFeatures()
+                added = True
+            else:
+                attr += [0] * (len(Block.oneGram) + len(Block.fourGram))
+
             attr += inst.getSpecialCharFeatures()
             instAttr += np.array(attr)
 

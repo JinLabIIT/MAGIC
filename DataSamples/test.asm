@@ -42,12 +42,12 @@
 .text:00401052 C2 04		reti
 
 .text:00401054 begin:
-.text:00401054 54 56            dd      56Ah
-.text:00401054 54 77            dw      49h
-.text:00401054 CC CC		mov     edi, eax
-.text:00401055 BB AA            db      98h 54h 31h
-.text:00401056 47 7B            ?qit@?1??QueryInterface@?$BasePatternProvider@VIVGridProvider@@UIGridProvider@@$02VIVGridProxy@@@@UAGJABU_GUID@@PAPAX@Z@4QBUQITAB@@B QITAB <offset __GUID_b17d6187_0907_464b_a168_0ef17a1572b1, 10h>
-.text:00401057 FF DD            xmmword_40382100        xmmword 80000000000000008000000000000000h
+.text:00401054 00 10            dd      56Ah
+.text:00401054 00 00            dw      49h
+.text:00401054 F0 F0		mov     edi, eax
+.text:00401055 00 8B            db      98h 54h 31h
+.text:00401056 FF 55            ?qit@?1??QueryInterface@?$BasePatternProvider@VIVGridProvider@@UIGridProvider@@$02VIVGridProxy@@@@UAGJABU_GUID@@PAPAX@Z@4QBUQITAB@@B QITAB <offset __GUID_b17d6187_0907_464b_a168_0ef17a1572b1, 10h>
+.text:00401057 8B DD            xmmword_40382100        xmmword 80000000000000008000000000000000h
 .text:00401060 8B 44		mov     eax, [esp+8]
 
 .text:00401064 loop:
@@ -84,18 +84,18 @@
 .text:00401084                  lpThreadParameter= dword ptr 10
 .text:00401084                  ProcessInformation= _PROCESS_INFORMATION ptr -498h
 .text:00401084
-.text:00401084 8B FF	        mov     edi, edi
-.text:00401086 8B 45 08		mov     eax, [ebp+arg_0]
+.text:00401084 5D C3	        mov     edi, edi
+.text:00401086 00 00 08		mov     eax, [ebp+arg_0]
 .text:00401088 56		push    esi
-.text:0040108A 33 F6		xor     esi, esi
-.text:0040108C 3B C6		cmp     eax, esi
+.text:0040108A 0D 2F		xor     esi, esi
+.text:0040108C 06 00		cmp     eax, esi
 .text:0040108E 75 1D		jnz     short loc_4010A3
 
-.text:00401090 E8 CB 71     call    __errno
-.text:00401092 56           push    esi
+.text:00401090 5D C3 8B     call    __errno
+.text:00401092 FF           push    esi
 .text:00401094 56           push    esi
-.text:00401096 C7 00        mov     dword ptr [eax], 16h
-.text:00401098 E8 38        call    __invalid_parameter
+.text:00401096 04 00        mov     dword ptr [eax], 16h
+.text:00401098 00 00        call    __invalid_parameter
 .text:0040109A 83 C4 14		add     esp, 14h
 .text:0040109C 6A 16		push    16h
 .text:0040109E 58           pop     eax
@@ -104,8 +104,8 @@
 .text:004010A3				; ---------------------------------
 .text:004010A3
 .text:004010A3		loc_4010A3:			       ; CODE XREF: sub_41D2CF
-.text:004010A3 8B 0D        mov     ecx, dword_43DE14
-.text:004010A5 89 08		mov     [eax], ecx
+.text:004010A3 F0 F0        mov     ecx, dword_43DE14
+.text:004010A5 F0 01		mov     [eax], ecx
 .text:004010A7 33 C0		xor     eax, eax
 
 .text:004010A9
@@ -136,5 +136,5 @@
 
 .text:004010B5 56           jnz     loc_4010B2
 
-.text:004010B7 33 F6		int     FFh
-.text:004010B9 3B C6		reti
+.text:004010B7 84 0D		int     FFh
+.text:004010B9 2F 06		reti

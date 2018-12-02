@@ -35,6 +35,68 @@ def featuresInTestAsm():
             [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # b5  19
             [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0],  # b7  20
         ], dtype=np.float32)
+
+    oneGram = np.zeros((op.shape[0], 3))
+    oneGramIndices = [
+        [],
+        [],
+        [],
+        [],  #48  3
+        [],  #50  4
+        [],  #52  5
+        [0, 0, 0, 0, 1,],  # 54  6
+        [],  #64  7
+        [],  #6D 8
+        [],  #76 9
+        [],  #79 10
+        [],  #80 11
+        [0, 0, 0,],  #84 12
+        [1, 0, 0, 0,],  #90 13
+        [],  #A3 14
+        [],  #A9 15
+        [
+            0, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+            2, 2, 2, 2, 2, 2, 2, 2, 2,
+            2, 2, 2, 2, 2, 2, 2, 2, 2,
+            2, 2, 2, 2, 2, 2, 2, 2, 2,
+            2, 2, 2, 2, 2, 2, 2, 2, 2,
+            2, 2, 2
+        ],  #AC 16
+        [1],  #AE 17
+        [],  #B3 18
+        [],  #B5 19
+        [],  #B7 20
+    ]
+    for i, indices in enumerate(oneGramIndices):
+        for j in indices:
+            oneGram[i, j] += 1
+
+    fourGram = np.zeros((op.shape[0], 10))
+    fourGramIndices = [
+        [],[],[],
+        [],  # 48  3
+        [],  # 50  4
+        [],  # 52  5
+        [4, 5, 8],  # 54  6
+        [],  #64  7
+        [],  #6D  8
+        [],  #76  9
+        [],  #79 10
+        [],  #80 11
+        [2, 6],  #84 12
+        [1, 7],  #90 13
+        [3],  #A3, 14
+        [],  #A9 15
+        [0]*45,  #AC 16
+        [],  #AE 17
+        [],  #B3 18
+        [],  #B5 19
+        [9]  #B7 20
+    ]
+    for i, indices in enumerate(fourGramIndices):
+        for j in indices:
+            fourGram[i, j] += 1
+
     ngram = np.zeros((op.shape[0], 257))
     nonZeroIndices = [
         [],
@@ -44,8 +106,8 @@ def featuresInTestAsm():
         [0x5E, 0x47],  # 50  4
         [0xC2, 0x04],  # 52  5
         [
-            0x54, 0x56, 0x54, 0x77, 0xCC, 0xCC, 0xBB, 0xAA, 0x47, 0x7B,
-            0xFF, 0xDD, 0x8B, 0x44
+            0x00, 0x10, 0x00, 0x00, 0xF0, 0xF0, 0x00, 0x8B, 0xFF, 0x55,
+            0x8B, 0xDD, 0x8B, 0x44
         ],  # 54  6
         [0x8A, 0x08, 0x8B, 0x54, 0x88, 0x0B, 0x88, 0x0A, 0xC3,
          0x55],  # 64  7
@@ -54,14 +116,14 @@ def featuresInTestAsm():
         [0x8A, 0x08, 0x40, 0x45, 0x84, 0xC9, 0x75, 0xF9],  #79 10
         [0x2B, 0xC2, 0xC3, 0x45],  #80 11
         [
-            0x8B, 0xFF, 0x8B, 0x45, 0x08, 0x56, 0x33, 0xF6, 0x3B, 0xC6,
+            0x5D, 0xC3, 0x00, 0x00, 0x08, 0x56, 0x0D, 0x2F, 0x06, 0x00,
             0x75, 0x1D
         ],  #84 12
         [
-            0xE8, 0xCB, 0x71, 0x56, 0x56, 0xC7, 0x00, 0xE8, 0x38, 0x83,
+            0x5D, 0xC3, 0x8B, 0xFF, 0x56, 0x04, 0x00, 0x00, 0x00, 0x83,
             0xC4, 0x14, 0x6A, 0x16, 0x58, 0xEB, 0x0A
         ],  #90 13
-        [0x8B, 0x0D, 0x89, 0x08, 0x33, 0xC0],  #A3 14
+        [0xF0, 0xF0, 0xF0, 0x01, 0x33, 0xC0],  #A3 14
         [0x5E, 0xC3],  #A9 15
         [
             0x00, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100,
@@ -74,7 +136,7 @@ def featuresInTestAsm():
         [0x8B, 0xFF],  #AE 17
         [0x8B, 0x45, 0x08],  #B3 18
         [0x56],  #B5 19
-        [0x33, 0xF6, 0x3B, 0xC6],  #B7 20
+        [0x84, 0x0D, 0x2F, 0x06],  #B7 20
     ]
     for i, indices in enumerate(nonZeroIndices):
         for j in indices:
@@ -98,7 +160,8 @@ def featuresInTestAsm():
 
     degree = np.array([[2, 0, 1, 2, 1, 0, 1, 4, 2, 1, 3, 0, 3, 2, 1, 0, 1, 2, 2, 2, 1]])
     numInsts = np.array([[1, 1, 1, 1, 1, 1, 5, 5, 3, 1, 4, 2, 6, 9, 3, 2, 1, 3, 1, 1, 2]])
-    return np.concatenate((op, ngram, spChars, degree.T, numInsts.T), axis=1)
+    return np.concatenate((op, oneGram, fourGram, spChars,
+                           degree.T, numInsts.T), axis=1)
 
 
 class TestCfgBuildedr(unittest.TestCase):
@@ -451,4 +514,3 @@ class TestAcfgRunningTime(unittest.TestCase):
 if __name__ == '__main__':
     log.setLevel("INFO")
     unittest.main()
-
