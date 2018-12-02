@@ -14,6 +14,7 @@ from ml_utils import cmd_args, gHP, kFoldSplit, S2VGraph
 from ml_utils import computePrScores, loadGraphsMayCache
 from ml_utils import storeConfusionMatrix, normalizeFeatures
 from ml_utils import getLearningRate, filterOutNoEdgeGraphs
+from ml_utils import loadModel, saveModel
 from e2e_model import Classifier, loopDataset, predictDataset
 from hyperparameters import parseHpTuning, HyperParameterIterator
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -86,36 +87,36 @@ def exportPredictions(graphs: List[S2VGraph], predProb, epoch: int = None):
     output.close()
 
 
-def testWithModel(classifier, testGraphs: List[S2VGraph]) -> None:
-    if testGraphs is None:
-        return
-
-    classifier.eval()
-    startTime = time.process_time()
-    testPredProb = predictDataset(testGraphs, classifier)
-    log.info(f'Net testing time = {time.process_time() - startTime} seconds')
-    exportPredictions(testGraphs, testPredProb)
+def testWithModel(classifier, testGraphs: List[S2VGraph],
+                  epoch: int = None) -> None:
+    saveModel(classifier)
+    if testGraphs is not None:
+        classifier.eval()
+        startTime = time.process_time()
+        testPredProb = predictDataset(testGraphs, classifier)
+        log.info(f'Net test time = {time.process_time() - startTime} seconds')
+        exportPredictions(testGraphs, testPredProb, epoch)
 
 
 def trainThenPredict(trainSet: List[S2VGraph],
                      testGraphs: List[S2VGraph],
                      numEpochs: int) -> Dict[str, float]:
     classifier = Classifier()
+    loadModel(classifier)
     log.info(f'Global hyperparameter setting: {gHP}')
     if cmd_args.mode == 'gpu':
         classifier = classifier.cuda()
 
-    optimizer = optim.SGD(classifier.parameters(), momentum=0.9, lr=gHP['lr'],
-                          weight_decay=gHP['l2RegFactor'])
+    optimizer = optim.Adam(classifier.parameters(), lr=gHP['lr'],
+                           weight_decay=gHP['l2RegFactor'])
     scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.1, patience=3,
-                                  verbose=True, min_lr=1e-5)
+                                  verbose=True, min_lr=1e-8)
     kFoldGraphs = kFoldSplit(max(gHP['cvFold'], 5), trainSet)
     trainGraphs = []
     for foldGraphs in kFoldGraphs[:-1]:
         trainGraphs.extend(foldGraphs)
 
     validGraphs = kFoldGraphs[-1]
-
     trainIndices = list(range(len(trainGraphs)))
     validIndices = list(range(len(validGraphs)))
     trainLossHist, trainAccuHist = [], []
@@ -126,6 +127,7 @@ def trainThenPredict(trainSet: List[S2VGraph],
     startTime = time.process_time()
     for e in range(numEpochs):
         random.shuffle(trainIndices)
+        log.debug(f'First 10 train indices: {trainIndices[:10]}')
         classifier.train()
         avgScore, trainPred, trainLabels = loopDataset(
             trainGraphs, classifier, trainIndices, optimizer=optimizer)
@@ -152,11 +154,10 @@ def trainThenPredict(trainSet: List[S2VGraph],
         validRecallHist.append(prScore['Recall'])
         validF1Hist.append(prScore['F1'])
         if e % 10 == 0:
-            log.info(f'First 10 train indices: {trainIndices[:10]}')
-            testWithModel(classifier, testGraphs)
+            testWithModel(classifier, testGraphs, e)
 
-        if getLearningRate(optimizer) < 1e-4:
-            if validLossHist[-1] > validLossHist[-2]:
+        if getLearningRate(optimizer) < 1e-5:
+            if validLossHist[-1] > validLossHist[-2] and gHP['batchSize'] < 80:
                 gHP['batchSize'] += 10
                 log.info(f'Epoch {e}: inc batch size to {gHP["batchSize"]}')
 

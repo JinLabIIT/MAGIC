@@ -11,6 +11,7 @@ test_dir=../../${DATA}/TestSet
 use_cached_data=True
 cache_path=cached_${DATA,,}_graphs
 norm_path=norm_${DATA,,}
+model_date=29-Nov-2018-19:21:58
 
 CUDA_VISIBLE_DEVICES=${GPU} python3.7 tuned_model.py        \
   -seed 1                                                   \
@@ -22,6 +23,7 @@ CUDA_VISIBLE_DEVICES=${GPU} python3.7 tuned_model.py        \
   -use_cached_data ${use_cached_data}                       \
   -cache_path ${cache_path}                                 \
   -norm_path ${norm_path}                                   \
+  -model_date ${model_date}                                 \
   -hp_path ${HP_PATH}
 
 echo "Tuned model prediction from ${test_dir}/submission.csv"

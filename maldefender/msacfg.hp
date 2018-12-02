@@ -1,5 +1,5 @@
 # DGCNN HPs
-poolingRatio = [0.5]
+poolingRatio = [0.75]
 graphConvSize = [[128, 64, 32, 32]]
 poolingType = ['sort']
 conv2dChannels = [16]
@@ -20,10 +20,10 @@ mlpHidden = [64]
 dropOutRate = [0.5]
 
 # Training HPs
-lr = [0.01]
+lr = [0.001]
 batchSize = [10]
 cvFold = [10]
-numEpochs = [100]
-l2RegFactor = [0.0005]
+numEpochs = [160]
+l2RegFactor = [0.0001]
 
 noteMsg = ["Adaptive pooling + VGG"]

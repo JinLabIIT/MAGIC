@@ -5,6 +5,7 @@ https://github.com/muhanzhang/pytorch_DGCNN
 """
 import argparse
 import random
+import time
 import torch
 import math
 import numpy as np
@@ -42,6 +43,8 @@ cmd_opt.add_argument('-norm_path', type=str, default='norm',
                      help='which cached data to use or write new data to')
 cmd_opt.add_argument('-hp_path', type=str, default='none',
                      help='raw hyperparameter values')
+cmd_opt.add_argument('-model_date', type=str, default='none',
+                     help='load pre-trained model on a specific date')
 gHP = dict()
 cmd_args, _ = cmd_opt.parse_known_args()
 cmd_args.use_cached_data = (cmd_args.use_cached_data == "True")
@@ -91,7 +94,7 @@ class S2VGraph(object):
 
 def filterOutNoEdgeGraphs(graphs: List[S2VGraph]) -> List[S2VGraph]:
     result = list(filter(lambda x: x.num_edges > 0, graphs))
-    numFiltered = len(result) - len(graphs)
+    numFiltered = len(graphs) - len(result)
     log.info(f'Skip {numFiltered} graphs that have no edge')
     return result
 
@@ -253,10 +256,10 @@ def normalizeFeatures(graphs: List[S2VGraph],
                       operation: str = 'min_max') -> List[List[float]]:
     normVectors = loadNormVectors(graphs, isTestSet)
     maxVector, minVector, avgVector, stdVector = normVectors
-    log.info(f'Max feature vector: {list(maxVector)}')
-    log.info(f'Min feature vector: {list(minVector)}')
-    log.info(f'Avg feature vector: {list(avgVector)}')
-    log.info(f'Std feature vector: {list(stdVector)}')
+    log.debug(f'Max feature vector: {list(maxVector)}')
+    log.debug(f'Min feature vector: {list(minVector)}')
+    log.debug(f'Avg feature vector: {list(avgVector)}')
+    log.debug(f'Std feature vector: {list(stdVector)}')
     diff = [x - y for (x, y) in zip(maxVector, minVector)]
     diffVector = [1 if math.isclose(x, 0.0) else x for x in diff]
     stdVector = [1 if math.isclose(x, 0.0) else x for x in stdVector]
@@ -352,3 +355,17 @@ def toOnehot(indices, num_classes):
 def getLearningRate(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
+
+
+def saveModel(classifier):
+    dateStr = time.strftime("%d-%b-%Y-%H:%M:%S", time.localtime())
+    modelPath = cmd_args.data.lower() + '_models/' + dateStr + '.pt'
+    torch.save(classifier.state_dict(), modelPath)
+    log.info(f'Model state is saved to {modelPath}')
+
+
+def loadModel(classifier):
+    if cmd_args.model_date != 'none':
+        path = cmd_args.data.lower() + '_models/' + cmd_args.model_date + '.pt'
+        classifier.load_state_dict(torch.load(path))
+        log.info(f'Load pre-trained model at {path}')
