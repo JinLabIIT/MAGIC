@@ -101,13 +101,15 @@ def filterOutNoEdgeGraphs(graphs: List[S2VGraph]) -> List[S2VGraph]:
 
 def loadData(dataDir: str, isTestSet: bool = False) -> List[S2VGraph]:
     log.info('Loading data as list of S2VGraph(s)')
+    dataPath = '%s/%s' % (dataDir, cmd_args.data)
+    dataPath = dataPath + '_test' if isTestSet else dataPath
+    f = open(dataPath + '.txt', 'r')
+
     gList: List[S2VGraph] = []
     tagDict: Dict[str, int] = {}   # mapping node tag to 0-based int
     numClasses = 0
-    f = open('%s/%s.txt' % (dataDir, cmd_args.data), 'r')
     numGraphs = int(f.readline().strip())
     maxVector, minVector, avgVector, stdVector = None, None, None, None
-
     for i in range(numGraphs):
         row = f.readline().strip().split()
         numNodes, label, bId = int(row[0]), row[1], row[2]
@@ -256,10 +258,10 @@ def normalizeFeatures(graphs: List[S2VGraph],
                       operation: str = 'min_max') -> List[List[float]]:
     normVectors = loadNormVectors(graphs, isTestSet)
     maxVector, minVector, avgVector, stdVector = normVectors
-    log.debug(f'Max feature vector: {list(maxVector)}')
-    log.debug(f'Min feature vector: {list(minVector)}')
-    log.debug(f'Avg feature vector: {list(avgVector)}')
-    log.debug(f'Std feature vector: {list(stdVector)}')
+    log.info(f'Max feature vector: {list(maxVector)}')
+    log.info(f'Min feature vector: {list(minVector)}')
+    log.info(f'Avg feature vector: {list(avgVector)}')
+    log.info(f'Std feature vector: {list(stdVector)}')
     diff = [x - y for (x, y) in zip(maxVector, minVector)]
     diffVector = [1 if math.isclose(x, 0.0) else x for x in diff]
     stdVector = [1 if math.isclose(x, 0.0) else x for x in stdVector]
@@ -268,19 +270,20 @@ def normalizeFeatures(graphs: List[S2VGraph],
         if math.isclose(pair[0], pair[1]):
             reduceDims.append(i)
 
-    log.info(f'Delete constant features: {reduceDims}')
+    if operation not in ['zero_mean', 'min_max']:
+        log.warning(f'Unknown normalization operation: {operation}')
+
     for g in graphs:
         if operation == 'min_max':
             g.node_features = (g.node_features - minVector) / diffVector
         elif operation == 'zero_mean':
             g.node_features = (g.node_features - avgVector) / stdVector
-        else:
-            log.debug(f'Unknown operation: {operation}')
 
-        for i in reduceDims:
-            g.node_features = np.delete(g.node_features, i, axis=1)
+        # for i in reduceDims:
+        #     g.node_features = np.delete(g.node_features, i, axis=1)
 
-    gHP['featureDim'] -= len(reduceDims)
+    # log.info(f'Delete constant features: {reduceDims}')
+    # gHP['featureDim'] -= len(reduceDims)
     return [maxVector, minVector, avgVector, stdVector]
 
 
@@ -304,7 +307,8 @@ def computePrScores(pred, labels, prefix: str = 'train',
     scores['F1'] = f1_score(labels, pred, average=avgMethod)
     if store:
         df = pd.DataFrame.from_dict(scores)
-        file = open('%s_%s_pr_scores.csv' % (cmd_args.data, prefix), 'w')
+        path = cmd_args.train_dir + '/%s_%s_pr_scores.csv'
+        file = open(path % (cmd_args.data, prefix), 'w')
         df.to_csv(file, index=('family' in scores), float_format='%.6f')
         file.close()
 
@@ -313,8 +317,8 @@ def computePrScores(pred, labels, prefix: str = 'train',
 
 def storeConfusionMatrix(pred, labels, prefix) -> None:
     cm = confusion_matrix(labels, pred)
-    np.savetxt('%s_%s_confusion_matrix.txt' % (cmd_args.data, prefix), cm,
-               fmt='%4d', delimiter=' ')
+    path = cmd_args.train_dir + '/%s_%s_confusion_matrix.txt'
+    np.savetxt(path % (cmd_args.data, prefix), cm, fmt='%4d', delimiter=' ')
 
 
 def storeEmbedding(classifier, graphs, prefix, sample_size=100) -> None:

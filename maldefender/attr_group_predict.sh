@@ -1,19 +1,23 @@
 #!/bin/bash
 
 DATA="${1-MSACFG}"
-GPU="${2-1}"  # select the GPU number, 0-3
+GPU="${2-2}"  # select the GPU number, 0-3
 HP_PATH="${3-msacfg.hp}"
-
+ATTR_GROUP="${4-AttrGroup1}"
 # general/default settings
 gpu_or_cpu=gpu
-train_dir=../../${DATA}/TrainSet
-test_dir=../../${DATA}/TestSet
-use_cached_data=True
-cache_path=cached_${DATA,,}_graphs
-norm_path=norm_${DATA,,}
-model_date=29-Nov-2018-19:21:58
 
-CUDA_VISIBLE_DEVICES=${GPU} python3.7 tuned_model.py        \
+# dataset with only attributes from instructions, not including n-grams
+input_dir=../../${DATA}/${ATTR_GROUP}
+train_dir=${input_dir}
+test_dir=${input_dir}
+use_cached_data=True
+cache_path=${input_dir}/cached_${DATA,,}_graphs
+norm_path=${input_dir}/norm_${DATA,,}
+norm_op=none
+model_date=03-Dec-2018-14:11:24
+
+CUDA_VISIBLE_DEVICES=${GPU} python3.7 eval_model.py         \
   -seed 1                                                   \
   -data ${DATA}                                             \
   -train_dir ${train_dir}                                   \
@@ -23,6 +27,7 @@ CUDA_VISIBLE_DEVICES=${GPU} python3.7 tuned_model.py        \
   -use_cached_data ${use_cached_data}                       \
   -cache_path ${cache_path}                                 \
   -norm_path ${norm_path}                                   \
+  -norm_op ${norm_op}                                       \
   -model_date ${model_date}                                 \
   -hp_path ${HP_PATH}
 

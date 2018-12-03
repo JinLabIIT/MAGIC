@@ -132,7 +132,8 @@ def trainThenPredict(trainSet: List[S2VGraph],
         avgScore, trainPred, trainLabels = loopDataset(
             trainGraphs, classifier, trainIndices, optimizer=optimizer)
         prScore = computePrScores(trainPred, trainLabels, 'train')
-        print('\033[92mTrain epoch %d: l %.5f\033[0m' % (e, avgScore[0]))
+        line = '\033[92mTrain epoch %d: l %.5f, a %.5f\033[0m'
+        print(line % (e, avgScore[0], avgScore[1]))
         trainLossHist.append(avgScore[0])
         trainAccuHist.append(avgScore[1])
         trainPrecHist.append(prScore['Precision'])
@@ -180,7 +181,7 @@ def trainThenPredict(trainSet: List[S2VGraph],
     }
     log.info(f'Model validset loss:\n{validLossHist}')
     df = pd.DataFrame.from_dict(result)
-    histFile = open('%sPredHist.csv' % cmd_args.data, 'w')
+    histFile = open(cmd_args.train_dir + '/%sPredHist.csv' % cmd_args.data, 'w')
     histFile.write("# %s\n" % str(gHP))
     df.to_csv(histFile, index_label='Epoch', float_format='%.6f')
     histFile.close()
@@ -220,20 +221,19 @@ if __name__ == '__main__':
     np.random.seed(cmd_args.seed)
     torch.manual_seed(cmd_args.seed)
 
-    # if cmd_args.data == 'YANACFG':
-    #     log.warning(f'No testset for YANACFG data')
-    #     testGraphs = None
-    # else:
-    #     startTime = time.process_time()
-    #     testGraphs = loadGraphsMayCache(cmd_args.test_dir, True)
-    #     normalizeFeatures(testGraphs, isTestSet=True, operation='min_max')
-    #     dataReadyTime = time.process_time() - startTime
-    #     log.info('Testset ready takes %.2fs' % dataReadyTime)
-    testGraphs = None
+    if cmd_args.data == 'YANACFG':
+        log.warning(f'No testset for YANACFG data')
+        testGraphs = None
+    else:
+        startTime = time.process_time()
+        testGraphs = loadGraphsMayCache(cmd_args.test_dir, True)
+        normalizeFeatures(testGraphs, isTestSet=True, operation=cmd_args.norm_op)
+        dataReadyTime = time.process_time() - startTime
+        log.info('Testset ready takes %.2fs' % dataReadyTime)
 
     startTime = time.process_time()
     trainGraphs = loadGraphsMayCache(cmd_args.train_dir, False)
-    normalizeFeatures(trainGraphs, isTestSet=False, operation='min_max')
+    normalizeFeatures(trainGraphs, isTestSet=False, operation=cmd_args.norm_op)
     trainGraphs = filterOutNoEdgeGraphs(trainGraphs)
     dataReadyTime = time.process_time() - startTime
     log.info('Trainset ready takes %.2fs' % dataReadyTime)
