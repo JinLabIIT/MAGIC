@@ -8,14 +8,17 @@ import random
 import time
 import torch
 import math
+import glob
 import numpy as np
 import pandas as pd
 import glog as log
 import networkx as nx
 import pickle as pkl
 from typing import List, Dict, Set, Tuple
+from hyperparameters import parseHpTuning, HyperParameterIterator
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import precision_score, recall_score, f1_score
+
 
 cmd_opt = argparse.ArgumentParser(
     description='Argparser for graph_classification')
@@ -97,6 +100,13 @@ def filterOutNoEdgeGraphs(graphs: List[S2VGraph]) -> List[S2VGraph]:
     numFiltered = len(graphs) - len(result)
     log.info(f'Skip {numFiltered} graphs that have no edge')
     return result
+
+
+def logDatasetInfo(graphs: List[S2VGraph]):
+    log.info(f'# graphs: {len(graphs)}')
+    log.info(f'# classes: {gHP["numClasses"]}')
+    log.info(f'node tag dimension: {gHP["nodeTagDim"]}')
+    log.info(f'node feature dimension: {gHP["featureDim"]}')
 
 
 def loadData(dataDir: str, isTestSet: bool = False) -> List[S2VGraph]:
@@ -190,10 +200,7 @@ def loadData(dataDir: str, isTestSet: bool = False) -> List[S2VGraph]:
     if nodeFeatures is not None:
         gHP['featureDim'] = nodeFeatures.shape[1]
 
-    log.info(f'# graphs: {len(gList)}')
-    log.info(f'# classes: {gHP["numClasses"]}')
-    log.info(f'node tag dimension: {gHP["nodeTagDim"]}')
-    log.info(f'node feature dimension: {gHP["featureDim"]}')
+    logDatasetInfo(gList)
     return gList
 
 
@@ -211,6 +218,7 @@ def loadGraphsMayCache(dataDir: str, isTestSet: bool = False) -> List[S2VGraph]:
         gHP['featureDim'] = dataset['featureDim']
         gHP['nodeTagDim'] = dataset['nodeTagDim']
         graphs = dataset['graphs']
+        logDatasetInfo(graphs)
         cacheFile.close()
     else:
         graphs = loadData(dataDir, isTestSet)
@@ -253,6 +261,24 @@ def loadNormVectors(graphs, isTestSet: bool = False) -> Tuple[List[float]]:
     return (maxVector, minVector, avgVector, stdVector)
 
 
+def deleteConstFeatures(graphs: List[S2VGraph], reduceDims: List[int]):
+    log.info(f'Delete constant features: {reduceDims}')
+    for i in reduceDims:
+        gHP['featureDim'] -= 1
+        for g in graphs:
+            g.node_features = np.delete(g.node_features, i, axis=1)
+
+
+def logLargeFeatures(graphs: List[S2VGraph], maxVector: List[float]):
+    for (idx, maxVal) in enumerate(maxVector):
+        if maxVal < 10000:
+            continue
+
+        log.info(f'Logarithm scale features {idx}')
+        for g in graphs:
+            g.node_features[:, idx] = np.ma.log10(g.node_features[:, idx]).filled(0)
+
+
 def normalizeFeatures(graphs: List[S2VGraph],
                       isTestSet: bool = False,
                       operation: str = 'min_max') -> List[List[float]]:
@@ -279,11 +305,8 @@ def normalizeFeatures(graphs: List[S2VGraph],
         elif operation == 'zero_mean':
             g.node_features = (g.node_features - avgVector) / stdVector
 
-        # for i in reduceDims:
-        #     g.node_features = np.delete(g.node_features, i, axis=1)
-
-    # log.info(f'Delete constant features: {reduceDims}')
-    # gHP['featureDim'] -= len(reduceDims)
+    logLargeFeatures(graphs, maxVector)
+    deleteConstFeatures(graphs, reduceDims)
     return [maxVector, minVector, avgVector, stdVector]
 
 
@@ -356,20 +379,59 @@ def toOnehot(indices, num_classes):
     return onehot.scatter_(1, indices.unsqueeze(1), 1)
 
 
-def getLearningRate(optimizer):
-    for param_group in optimizer.param_groups:
-        return param_group['lr']
-
-
-def saveModel(classifier):
+def saveModel(classifier, msg: str = ''):
     dateStr = time.strftime("%d-%b-%Y-%H:%M:%S", time.localtime())
-    modelPath = cmd_args.data.lower() + '_models/' + dateStr + '.pt'
+    modelPath = cmd_args.data.lower() + '_models/' + dateStr + msg + '.pt'
     torch.save(classifier.state_dict(), modelPath)
     log.info(f'Model state is saved to {modelPath}')
 
 
 def loadModel(classifier):
     if cmd_args.model_date != 'none':
-        path = cmd_args.data.lower() + '_models/' + cmd_args.model_date + '.pt'
-        classifier.load_state_dict(torch.load(path))
-        log.info(f'Load pre-trained model at {path}')
+        pathPrefix = cmd_args.data.lower() + '_models/' + cmd_args.model_date
+        for path in glob.glob(cmd_args.data.lower() + '_models/*.pt'):
+            if path.startswith(pathPrefix):
+                classifier.load_state_dict(torch.load(path))
+                log.info(f'Load pre-trained model at {path}')
+                return
+
+    log.error(f'Failed to load model with date prefix {cmd_args.model_date}')
+
+
+def decideHyperparameters(graphs: List[S2VGraph]) -> int:
+    if cmd_args.hp_path == 'none':
+        log.info(f'Using previous CV results to decide hyperparameters')
+        optHp = parseHpTuning(cmd_args.data)
+        log.info(f'Optimal hyperparameter setting: {optHp}')
+        for (key, val) in optHp.items():
+            if key not in gHP:
+                log.debug(f'Add {key} = {val} to global HP')
+            elif gHP[key] != val:
+                log.debug(f'Replace {key} from {gHP[key]} to {val}')
+
+            gHP[key] = val
+
+        return gHP['optNumEpochs']
+    else:
+        log.info(f'Using 1st hyperparameter setting from {cmd_args.hp_path}')
+        hpIter = HyperParameterIterator(cmd_args.hp_path)
+        hp = next(hpIter)
+        for (key, val) in hp.items():
+            gHP[key] = val
+
+        numNodesList = sorted([g.num_nodes for g in graphs])
+        idx = int(math.ceil(hp['poolingRatio'] * len(graphs))) - 1
+        gHP['poolingK'] = numNodesList[idx]
+        return gHP['numEpochs']
+
+
+def getLearningRate(optimizer):
+    for param_group in optimizer.param_groups:
+        return param_group['lr']
+
+
+def adjustBatchSize(optimizer, validLossHist: List[float]):
+    if getLearningRate(optimizer) < 1e-5 and len(validLossHist) > 2:
+        if validLossHist[-1] > validLossHist[-2] and gHP['batchSize'] < 20:
+            gHP['batchSize'] += 10
+            log.info(f'Epoch {e}: inc batch size to {gHP["batchSize"]}')
