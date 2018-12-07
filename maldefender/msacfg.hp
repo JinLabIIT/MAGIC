@@ -23,7 +23,7 @@ dropOutRate = [0.1]
 lr = [0.0001]
 batchSize = [10]
 cvFold = [10]
-numEpochs = [64]
+numEpochs = [10]
 l2RegFactor = [0.0001]
 
 noteMsg = ["Adaptive pooling + VGG"]

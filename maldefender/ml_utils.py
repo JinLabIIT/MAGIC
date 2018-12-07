@@ -305,8 +305,8 @@ def normalizeFeatures(graphs: List[S2VGraph],
         elif operation == 'zero_mean':
             g.node_features = (g.node_features - avgVector) / stdVector
 
-    logLargeFeatures(graphs, maxVector)
-    deleteConstFeatures(graphs, reduceDims)
+    # logLargeFeatures(graphs, maxVector)
+    # deleteConstFeatures(graphs, reduceDims)
     return [maxVector, minVector, avgVector, stdVector]
 
 
