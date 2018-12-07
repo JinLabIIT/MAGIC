@@ -19,13 +19,13 @@ def plotPrfScores(data, scorePath):
 
     plt.plot(x, df['Precision'], 'r', ls=':', marker='+',
              linewidth=2, markersize=12.0, markeredgewidth=3,
-             label='Precision')
+             clip_on=False, label='Precision')
     plt.plot(x, df['Recall'], 'g', ls='--', marker='x',
              linewidth=2, markersize=12.0, markeredgewidth=3,
-             label='Recall')
+             clip_on=False, label='Recall')
     plt.plot(x, df['F1'], 'b', ls='-.', marker='*',
              linewidth=2, markersize=12.0, markeredgewidth=3,
-             label='F1')
+             clip_on=False, label='F1 Score')
     plt.xticks(x, df['Family'], rotation=45)
     plt.xlim((0, len(x) - 1))
     plt.ylabel('Performance Scores')
@@ -42,7 +42,7 @@ def plotPrfScores(data, scorePath):
 
 if __name__ == '__main__':
     scorePaths = {
-        'MsAcfg': '../../MSACFG/Nov16TrainValidScores/MSACFG_valid_pr_scores.csv',
+        # 'MsAcfg': '../../MSACFG/Nov16TrainValidScores/MSACFG_valid_pr_scores.csv',
         'YanAcfg': '../../YANACFG/Nov15TrainValidScores/YANACFG_valid_pr_scores.txt',
     }
     for (name, path) in scorePaths.items():
