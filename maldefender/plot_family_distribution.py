@@ -39,20 +39,37 @@ def familyDistribution(data: str, familyLabel: Dict[int, str]):
 
 
 def plotFamilyDist(dist: Dict[str, float], data: str):
+    dist = pd.read_csv('%s_train_label_distribution.csv' % data.upper())
+    print(dist)
     indices = range(0, len(dist))
+    print(indices)
+
     fig, ax = plt.subplots()
     barWidth = 0.65
 
-    rects = ax.bar(indices, dist.values(), barWidth,
-                   color='white', hatch='/', edgecolor='black')
-    ax.set_ylabel('#Instances in Dataset')
-    ax.set_xticks(indices)
-    ax.set_xticklabels(dist.keys(), rotation=45)
-    plt.subplots_adjust(left=0.14, bottom=0.17, right=0.98, top=0.99)
+    rects = ax.barh(indices, dist['Cnt'], barWidth,
+                    color='white', hatch='/', edgecolor='black')
+    ax.set_xlabel('#Instances in Dataset')
+    ax.set_yticks(indices)
+    ax.set_yticklabels(dist['Family'], rotation=0)
+    if data.lower() == 'msacfg':
+        ax.set_xlim((0, 3300))
+    else:
+        ax.set_xlim((0, 4400))
+
+    cntMsAcfg = [1541, 2478, 2942, 475, 42, 751, 398, 1228, 1013]
+    for (i, val) in enumerate(dist['Cnt']):
+        if data.lower() == 'msacfg':
+            ax.text(val, i + barWidth / 4, str(cntMsAcfg[i]))
+        else:
+            ax.text(val, i + barWidth / 3, str(val))
+
+    ax.invert_yaxis()
+    plt.subplots_adjust(left=0.15, bottom=0.10, right=0.96, top=0.99)
     plt.grid(ls='-.')
     plt.savefig('%sLabelDist.pdf' % data, format='pdf')
     log.info(f'Figure for {data} saved to {data}LabelDist.pdf')
-    # plt.show()
+    plt.show()
 
 
 if __name__ == '__main__':
@@ -68,7 +85,7 @@ if __name__ == '__main__':
     msLabel = {label: name for (label, name) in enumerate(msNames)}
     yanLabel = {label: name for (label, name) in enumerate(yanNames)}
 
-    msDist = familyDistribution('MSACFG', msLabel)
+    msDist = None  # familyDistribution('MSACFG', msLabel)
     plotFamilyDist(msDist, 'MsAcfg')
-    yanDist = familyDistribution('YANACFG', yanLabel)
+    yanDist = None  # familyDistribution('YANACFG', yanLabel)
     plotFamilyDist(yanDist, 'YanAcfg')
