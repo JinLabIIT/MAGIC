@@ -28,8 +28,8 @@ def preTrain(trainSet: List[S2VGraph], numEpochs: int) -> Dict[str, float]:
 
     optimizer = optim.Adam(classifier.parameters(), lr=gHP['lr'],
                            weight_decay=gHP['l2RegFactor'])
-    scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.1, patience=3,
-                                  verbose=True, min_lr=1e-8)
+    scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.1, patience=1,
+                                  verbose=True)
     kFoldGraphs = kFoldSplit(max(gHP['cvFold'], 5), trainSet)
     trainGraphs = []
     for foldGraphs in kFoldGraphs[:-1]:
@@ -78,6 +78,10 @@ def preTrain(trainSet: List[S2VGraph], numEpochs: int) -> Dict[str, float]:
         if validScore[0] < 0.04 or e % 10 == 0:
             log.info(f'Save model with {validScore[0]} validation loss.')
             saveModel(classifier, msg='_vl%.6f' % validScore[0])
+            storeConfusionMatrix(trainPred, trainLabels, 'train_e%d' % e)
+            storeConfusionMatrix(validPred, validLabels, 'valid_e%d' % e)
+            computePrScores(trainPred, trainLabels, 'train_e%d' % e, None, store=True)
+            computePrScores(validPred, validLabels, 'valid_e%d' % e, None, store=True)
 
     log.info(f'Net training time = {time.process_time() - startTime} seconds')
     storeConfusionMatrix(trainPred, trainLabels, 'train')

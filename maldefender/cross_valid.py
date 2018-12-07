@@ -17,21 +17,24 @@ from hyperparameters import HyperParameterIterator, parseHpTuning
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 
-def trainThenValid(trainGraphs: List[S2VGraph], validGraphs: List[S2VGraph]):
+def trainThenValid(trainGraphs: List[S2VGraph], validGraphs: List[S2VGraph],
+                   foldId: str):
     classifier = Classifier()
+    loadModel(classifier)
+
     log.info(f"Hyperparameter setting: {gHP}")
 
     if cmd_args.mode == 'gpu':
         classifier = classifier.cuda()
 
-    optimizer = optim.SGD(classifier.parameters(),
-                          lr=gHP['lr'], momentum=0.9,
-                          weight_decay=gHP['l2RegFactor'])
+    optimizer = optim.Adam(classifier.parameters(), lr=gHP['lr'],
+                           weight_decay=gHP['l2RegFactor'])
     scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.1, patience=3,
-                                  verbose=True, min_lr=1e-5)
+                                  verbose=True)
     trainIndices = list(range(len(trainGraphs)))
     validIndices = list(range(len(validGraphs)))
-    trainLossHist, validLossHist = [], []
+    trainLossHist, trainAccuHist = [], []
+    validLossHist, validAccuHist = [], []
 
     startTime = time.process_time()
     for i in range(gHP['numEpochs']):
@@ -40,25 +43,41 @@ def trainThenValid(trainGraphs: List[S2VGraph], validGraphs: List[S2VGraph]):
         classifier.train()
         avgScore, trainPred, trainLabels = loopDataset(
             trainGraphs, classifier, trainIndices, optimizer=optimizer)
-        print('\033[92mTrain epoch %d: loss %.6f\033[0m' % (i, avgScore[0]))
+        line = '\033[92mTrain epoch %d: loss %.6f, a %.6f\033[0m'
+        print(line % (i, avgScore[0], avgScore[1]))
         trainLossHist.append(avgScore[0])
+        trainAccuHist.append(avgScore[1])
 
         classifier.eval()
         validScore, validPred, validLabels = loopDataset(
             validGraphs, classifier, validIndices)
-        print('\033[93mValid epoch %d: loss %.6f\033[0m' % (i, validScore[0]))
-        validLossHist.append(validScore[0])
         scheduler.step(validScore[0])
 
-        if getLearningRate(optimizer) < 1e-4:
-            if validLossHist[-1] > validLossHist[-2]:
-                gHP['batchSize'] += 10
-                log.info(f'Epoch {e}: inc batch size to {gHP["batchSize"]}')
+        line = '\033[93mValid epoch %d: loss %.6f, a %.6f\033[0m'
+        print(line % (i, validScore[0], validScore[1]))
+        validLossHist.append(validScore[0])
+        validAccuHist.append(validScore[1])
+
+        if validScore[0] < 0.04 or e % 10 == 0:
+            log.info(f'Save model with {validScore[0]} validation loss.')
+            saveModel(classifier, msg='_vl%.6f' % validScore[0])
+            storeConfusionMatrix(trainPred, trainLabels, 'train_e%d' % e)
+            storeConfusionMatrix(validPred, validLabels, 'valid_e%d' % e)
+            computePrScores(trainPred, trainLabels, 'train_e%d' % e, None, store=True)
+            computePrScores(validPred, validLabels, 'valid_e%d' % e, None, store=True)
 
     log.info(f'Net training time = {time.process_time() - startTime} seconds')
     hist = {}
     hist['TrainLoss'] = trainLossHist
+    hist['TrainAccu'] = trainAccuHist
     hist['ValidLoss'] = validLossHist
+    hist['ValidAccu'] = validAccuHist
+    log.info(f'Model validset loss:\n{validLossHist}')
+    df = pd.DataFrame.from_dict(hist)
+    histFile = open(cmd_args.train_dir + '/CvHist%s.csv' % foldId, 'w')
+    histFile.write("# %s\n" % str(gHP))
+    df.to_csv(histFile, index_label='Epoch', float_format='%.6f')
+    histFile.close()
     return hist
 
 
@@ -92,7 +111,7 @@ def crossValidate(graphFolds: List[List[S2VGraph]], runId: int) -> None:
             else:
                 trainGraphs.extend(graphFolds[i])
 
-        hist = trainThenValid(trainGraphs, validGraphs)
+        hist = trainThenValid(trainGraphs, validGraphs, '%d-%d' % (runId, f))
         cvMetrics.append(hist)
 
     avgMetrics = averageMetrics(cvMetrics)
@@ -112,7 +131,8 @@ if __name__ == '__main__':
 
     startTime = time.process_time()
     graphs = loadGraphsMayCache(cmd_args.train_dir)
-    normalizeFeatures(graphs, isTestSet=False, operation='min_max')
+    normalizeFeatures(graphs, isTestSet=False, operation=cmd_args.norm_op)
+    trainGraphs = filterOutNoEdgeGraphs(trainGraphs)
     dataReadyTime = time.process_time() - startTime
     log.info('Dataset ready takes %.2fs' % dataReadyTime)
 
