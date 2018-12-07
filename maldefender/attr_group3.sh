@@ -1,9 +1,9 @@
 #!/bin/bash
 
 DATA="${1-MSACFG}"
-GPU="${2-2}"  # select the GPU number, 0-3
+GPU="${2-3}"  # select the GPU number, 0-3
 HP_PATH="${3-msacfg.hp}"
-ATTR_GROUP="${4-AttrGroup1}"
+ATTR_GROUP="${4-AttrGroup3}"
 # general/default settings
 gpu_or_cpu=gpu
 
@@ -15,9 +15,11 @@ use_cached_data=True
 cache_path=${input_dir}/cached_${DATA,,}_graphs
 norm_path=${input_dir}/norm_${DATA,,}
 norm_op=none
-model_date=03-Dec-2018-14:11:24
+model_date=04-Dec-2018-16:22:09
+# model_date=04-Dec-2018-14:55:34
+# model_date=04-Dec-2018-08:16:52
 
-CUDA_VISIBLE_DEVICES=${GPU} python3.7 eval_model.py         \
+CUDA_VISIBLE_DEVICES=${GPU} python3.7 pretrain_model.py     \
   -seed 1                                                   \
   -data ${DATA}                                             \
   -train_dir ${train_dir}                                   \
@@ -30,6 +32,3 @@ CUDA_VISIBLE_DEVICES=${GPU} python3.7 eval_model.py         \
   -norm_op ${norm_op}                                       \
   -model_date ${model_date}                                 \
   -hp_path ${HP_PATH}
-
-echo "Tuned model prediction from ${test_dir}/submission.csv"
-head -n10 ${test_dir}/submission.csv
